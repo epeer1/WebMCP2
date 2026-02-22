@@ -1,5 +1,6 @@
 import type { ComponentAnalysis, FrameworkType } from '../types.js';
 import { extname } from 'node:path';
+import { parseReactFile } from './react-parser.js';
 
 /**
  * Detect framework from file extension and parse accordingly.
@@ -12,8 +13,7 @@ export function parseFile(source: string, fileName: string): ComponentAnalysis {
 
   switch (framework) {
     case 'react':
-      // Phase 1: implement React parser with ts-morph
-      return createEmptyAnalysis(fileName, 'react');
+      return parseReactFile(source, fileName);
     case 'html':
       // Phase 3: implement HTML parser with htmlparser2
       return createEmptyAnalysis(fileName, 'html');
