@@ -1,0 +1,30 @@
+{
+  "name": "webmcp-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "build:engine": "npm run build -w @webmcp/engine",
+    "build:runtime": "npm run build -w @webmcp/runtime",
+    "build:server": "npm run build -w @webmcp/server",
+    "build:cli": "npm run build -w webmcp",
+    "dev:server": "npm run dev -w @webmcp/server",
+    "dev:cli": "npm run dev -w webmcp",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0",
+    "prettier": "^3.5.0"
+  },
+  "packageManager": "npm@10.0.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
