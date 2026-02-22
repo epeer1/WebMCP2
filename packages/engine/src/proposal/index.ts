@@ -73,20 +73,17 @@ function groupIntoToolCandidates(component: ComponentInfo): ToolCandidate[] {
     const usedButtons = new Set<UIElement>();
 
     // ── Group 1: Form-based tools ─────────────────────────────
-    // A form group = all inputs inside a <form> (or wrapped by an onSubmit handler)
-    // + the submit button + the onSubmit handler
+    // Path A: React — driven by onSubmit event handlers
     const submitHandlers = component.eventHandlers.filter(h => h.event === 'onSubmit');
 
     if (submitHandlers.length > 0) {
         for (const handler of submitHandlers) {
-            // Inputs: any input/textarea/select (with or without parentFormId)
             const inputs = component.elements.filter(el =>
                 ['input', 'textarea', 'select'].includes(el.tag) &&
                 !isPasswordOnly(el) &&
                 el.inputType !== 'file'
             );
 
-            // The submit button
             const submitBtn = component.elements.find(
                 el => el.tag === 'button' && (el.inputType === 'submit' || el.attributes['type'] === 'submit')
             ) ?? component.elements.find(el => el.tag === 'button');
@@ -101,6 +98,66 @@ function groupIntoToolCandidates(component: ComponentInfo): ToolCandidate[] {
                 handler,
             });
         }
+    } else {
+        // Path B: HTML — driven by <form> elements (no JS onSubmit handlers needed)
+        const formElements = component.elements.filter(el => el.tag === 'form');
+
+        for (const formEl of formElements) {
+            const formId = formEl.id;
+
+            // Inputs inside this form
+            const inputs = component.elements.filter(el =>
+                ['input', 'textarea', 'select'].includes(el.tag) &&
+                !isPasswordOnly(el) &&
+                el.inputType !== 'file' &&
+                (formId === undefined || el.parentFormId === formId || el.parentFormId === undefined)
+            );
+
+            // Submit button inside this form (or first button)
+            const submitBtn = component.elements.find(
+                el => el.tag === 'button' &&
+                    (el.inputType === 'submit' || el.attributes['type'] === 'submit') &&
+                    (formId === undefined || el.parentFormId === formId)
+            ) ?? component.elements.find(el => el.tag === 'button');
+
+            if (submitBtn) usedButtons.add(submitBtn);
+
+            // Inline onSubmit handler if present
+            const handler = component.eventHandlers.find(h => h.event === 'onSubmit');
+
+            if (inputs.length > 0 || submitBtn) {
+                candidates.push({
+                    type: 'form',
+                    componentName: component.name,
+                    triggerElement: submitBtn,
+                    inputElements: inputs,
+                    handler,
+                });
+            }
+        }
+
+        // If there are inputs but no explicit <form> element (rare), treat them as one group
+        if (formElements.length === 0) {
+            const inputs = component.elements.filter(el =>
+                ['input', 'textarea', 'select'].includes(el.tag) &&
+                !isPasswordOnly(el) &&
+                el.inputType !== 'file'
+            );
+            const submitBtn = component.elements.find(
+                el => el.tag === 'button' && (el.inputType === 'submit' || el.attributes['type'] === 'submit')
+            ) ?? component.elements.find(el => el.tag === 'button');
+
+            if (inputs.length > 0 && submitBtn) {
+                if (submitBtn) usedButtons.add(submitBtn);
+                candidates.push({
+                    type: 'form',
+                    componentName: component.name,
+                    triggerElement: submitBtn,
+                    inputElements: inputs,
+                    handler: undefined,
+                });
+            }
+        }
     }
 
     // ── Group 2: Standalone buttons (not used above) ──────────
@@ -112,14 +169,13 @@ function groupIntoToolCandidates(component: ComponentInfo): ToolCandidate[] {
     );
 
     for (const btn of standaloneButtons) {
-        // Find the onClick handler
         const handler = findHandlerForButton(btn, component.eventHandlers);
 
         candidates.push({
             type: 'action',
             componentName: component.name,
             triggerElement: btn,
-            inputElements: [],  // Standalone actions take no parameters
+            inputElements: [],
             handler,
         });
     }

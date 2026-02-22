@@ -2,6 +2,7 @@
 
 import { program } from 'commander';
 import { instrumentCommand } from './commands/instrument.js';
+import { initCommand } from './commands/init.js';
 
 program
   .name('webmcp')
@@ -21,5 +22,11 @@ program
   .option('--model <name>', 'Model name for the chosen LLM backend (e.g. gpt-4o, llama3, phi3)')
   .option('--format <format>', 'Output format: iife | esm | auto', 'auto')
   .action(instrumentCommand);
+
+program
+  .command('init')
+  .description('Initialize WebMCP in the current project (creates .webmcprc.json)')
+  .option('--force', 'Overwrite existing .webmcprc.json if present')
+  .action(initCommand);
 
 program.parse();

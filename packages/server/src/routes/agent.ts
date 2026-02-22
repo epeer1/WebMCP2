@@ -176,7 +176,6 @@ agentRouter.post('/', async (req: Request, res: Response) => {
         format: 'iife',
         framework: cached.analysis.framework,
         llm,
-        sourceExcerpt: cached.sourceCode.slice(0, 1000),
       });
 
       const response = [
