@@ -96,6 +96,17 @@ All definitions can be overridden manually by supplying a `classifications` map 
 
 ---
 
+## 🔮 V2 Roadmap & Experimental WebMCP
+
+As of early 2026, Chrome 146+ has released experimental support for **native WebMCP** (`navigator.modelContext`).
+
+Currently, WebMCP projects rely on the `@webmcp/runtime` package to polyfill this connection to your AI agents. As browser vendors adopt the W3C WebML standard, the CLI will transparently switch to generating purely native code:
+`navigator.modelContext.registerTool({ ... })`
+
+Until then, your `@webmcp/runtime` script bridge allows your site to participate in the exact same AI ecosystem today.
+
+---
+
 ## 👨‍💻 Developer & Contributor Guide
 
 WebMCP is a Turborepo monorepo.

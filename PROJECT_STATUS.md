@@ -63,6 +63,28 @@ While the unit tests (57 tests) and Playwright E2E suite are green, the followin
 
 ---
 
+## 🔮 V2 Roadmap (Chrome Native Integration)
+
+As of February 2026, Google Chrome (v146+) has launched experimental native support for **WebMCP** via the `#experimental-web-platform-features` flag.
+
+Our architecture is perfectly positioned to support this new standard in Phase 5:
+
+**1. The Native API Shift**
+Currently, our `webmcp` CLI generates tools targeting our user-space polyfill:
+`window.mcp.registerTool({ ... })`
+
+In V2, the CLI generator will simply be updated to target the new native API:
+`navigator.modelContext.registerTool({ ... })`
+
+**2. Declarative HTML Generation**
+Chrome 146 introduced a declarative DOM API. For static sites without JS, our HTML parser could be updated to automatically inject these new standard attributes into the source files:
+`<form toolname="book_appointment" tooldescription="..." toolautosubmit="true">`
+
+**3. The `@webmcp/runtime` Pivot**
+Once all major browsers support `navigator.modelContext` natively, our `@webmcp/runtime` package can pivot from being the execution engine to acting as the **official polyfill** (similar to `@mcp-b/global`) for older browsers.
+
+---
+
 ## 🔌 Steps to make it fully ready as a GitHub Copilot Extension
 
 The `@webmcp/server` package already contains the express server skeleton implementing the GitHub Copilot SSE text streaming protocol. To go live:
