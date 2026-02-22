@@ -2,9 +2,11 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, basename, extname } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
+import { checkbox } from '@inquirer/prompts';
 import { parseFile } from '@webmcp/engine/parser';
 import { buildProposals } from '@webmcp/engine/proposal';
 import { generateMCPCode } from '@webmcp/engine/generator';
+import { detectLLMBackend } from '@webmcp/engine/llm';
 import type { ToolProposal } from '@webmcp/engine';
 
 interface InstrumentOptions {
@@ -14,6 +16,7 @@ interface InstrumentOptions {
   all?: boolean;
   select?: string;
   llm?: string;
+  model?: string;
   format?: string;
 }
 
@@ -44,74 +47,107 @@ export async function instrumentCommand(
     process.exit(1);
   }
 
-  // 2. Parse
+  // 2. Detect LLM backend
+  const llmSpinner = ora('Detecting LLM backend...').start();
+  const llm = await detectLLMBackend(options.llm, options.model).catch(() => {
+    const { NoneAdapter } = require('@webmcp/engine/llm');
+    return new NoneAdapter();
+  });
+  llmSpinner.succeed(`Using: ${chalk.cyan(llm.name)}`);
+
+  // 3. Parse
   const spinner = ora('Parsing component...').start();
   let source: string;
   try {
     source = readFileSync(filePath, 'utf-8');
   } catch (err) {
     spinner.fail('Failed to read file');
-    console.error(chalk.red(`  ${(err as Error).message}`));
     process.exit(1);
   }
 
   const analysis = parseFile(source, basename(filePath));
-  spinner.succeed(`Parsed ${basename(filePath)} (${analysis.framework})`);
+  spinner.succeed(`Parsed ${chalk.white(basename(filePath))} (${analysis.framework})`);
 
-  // 3. Build proposals
+  // 4. Build proposals
   const proposals = buildProposals(analysis);
 
   if (proposals.length === 0) {
-    console.log(chalk.yellow('\n⚠ No instrumentable elements found in this file.'));
+    console.log(chalk.yellow('\n⚠ No instrumentable elements found.'));
     console.log(chalk.gray('  This file has no forms, buttons, or interactive elements.\n'));
     return;
   }
 
-  // 4. Print proposal table
+  // 5. Print proposal table
   console.log(chalk.green(`\n✔ Found ${proposals.length} tool proposal(s)\n`));
   printProposalTable(proposals);
 
   if (options.dryRun) {
-    console.log(chalk.blue('\nℹ Dry run mode — no files written.'));
-    console.log(chalk.gray('  Run without --dry-run to generate .mcp.js output.\n'));
+    console.log(chalk.blue('\nℹ Dry run — no files written.\n'));
     return;
   }
 
-  // 5. Select tools
+  // 6. Select tools
   let selected: ToolProposal[];
 
   if (options.yes) {
-    selected = proposals.filter(p => p.risk !== 'destructive');
+    selected = proposals.filter(p => p.risk !== 'destructive' && p.risk !== 'excluded');
+    console.log(chalk.blue(`ℹ Auto-selecting ${selected.length} safe/caution tool(s).\n`));
   } else if (options.all) {
-    selected = proposals;
+    selected = proposals.filter(p => p.risk !== 'excluded');
+    console.log(chalk.blue(`ℹ Selecting all ${selected.length} tool(s).\n`));
   } else if (options.select) {
     const indices = options.select.split(',').map(Number);
     selected = proposals.filter(p => indices.includes(p.index));
   } else {
-    // Default: pre-selected (safe + caution)
-    selected = proposals.filter(p => p.selected);
-    console.log(chalk.blue(`ℹ Auto-selecting ${selected.length} tool(s). Use --all to include destructive.\n`));
+    // Interactive checkbox picker
+    const choices = proposals
+      .filter(p => p.risk !== 'excluded')
+      .map(p => ({
+        name: `${RISK_BADGE[p.risk]} [${p.index}] ${p.name} — ${p.description}`,
+        value: p.index,
+        checked: p.selected,
+      }));
+
+    const selectedIndices = await checkbox({
+      message: 'Select tools to generate:',
+      choices,
+    });
+
+    selected = proposals.filter(p => selectedIndices.includes(p.index));
   }
 
   if (selected.length === 0) {
-    console.log(chalk.yellow('No tools selected. Nothing generated.\n'));
+    console.log(chalk.yellow('No tools selected — nothing generated.\n'));
     return;
   }
 
-  // 6. Generate
-  const genSpinner = ora(`Generating ${selected.length} tool(s)...`).start();
-  const code = generateMCPCode(selected, {
-    format: 'iife',
-    framework: analysis.framework,
-  });
-  genSpinner.succeed(`Generated ${selected.length} tool(s)`);
+  // 7. Generate
+  const genSpinner = ora(`Generating ${selected.length} tool(s) with ${llm.name}...`).start();
+  let code: string;
+  try {
+    code = await generateMCPCode(selected, {
+      format: 'iife',
+      framework: analysis.framework,
+      llm,
+      sourceExcerpt: source.slice(0, 2000),
+    });
+    genSpinner.succeed(`Generated ${selected.length} tool(s)`);
+  } catch (err) {
+    genSpinner.fail(`Generation error: ${(err as Error).message}`);
+    process.exit(1);
+  }
 
-  // 7. Write
+  // 8. Write output
   const outputPath = options.output ?? deriveOutputPath(filePath);
   writeFileSync(outputPath, code, 'utf-8');
-  console.log(chalk.green(`\n📄 Output written to: ${outputPath}\n`));
-  console.log(chalk.gray('  Add <script src="@webmcp/runtime"></script> to your page to enable window.mcp\n'));
+
+  console.log(chalk.green(`\n📄 Written to: ${outputPath}\n`));
+  console.log(chalk.gray('  Next steps:'));
+  console.log(chalk.gray('  1. Add <script src="https://unpkg.com/@webmcp/runtime"></script> to your page'));
+  console.log(chalk.gray(`  2. Add <script src="${basename(outputPath)}"></script> after the runtime\n`));
 }
+
+// ── Helpers ───────────────────────────────────────────────────
 
 function printProposalTable(proposals: ToolProposal[]): void {
   for (const p of proposals) {
@@ -121,9 +157,7 @@ function printProposalTable(proposals: ToolProposal[]): void {
     console.log(`  ${check} ${chalk.bold(`[${p.index}]`)} ${chalk.white(p.name)} ${badge}`);
     console.log(`       ${chalk.gray(p.description)}`);
     console.log(`       ${chalk.gray('Fields:')} ${chalk.cyan(fields)}`);
-    if (p.riskReason) {
-      console.log(`       ${chalk.gray('Reason:')} ${chalk.dim(p.riskReason)}`);
-    }
+    if (p.riskReason) console.log(`       ${chalk.gray('Reason:')} ${chalk.dim(p.riskReason)}`);
     console.log('');
   }
 }

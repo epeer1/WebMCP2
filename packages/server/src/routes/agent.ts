@@ -1,103 +1,203 @@
 import { Router, type Request, type Response } from 'express';
+import { parseFile } from '@webmcp/engine/parser';
+import { buildProposals } from '@webmcp/engine/proposal';
+import { NoneAdapter } from '@webmcp/engine/llm';
+import { generateMCPCode } from '@webmcp/engine/generator';
+import { createHash } from 'node:crypto';
+import { cacheProposal, getLatestProposal } from '../state/proposal-cache.js';
+import type { ToolProposal } from '@webmcp/engine';
 
 export const agentRouter = Router();
 
-// ── Copilot Extension SSE helpers ──────────────────────────
+// ── SSE helpers ───────────────────────────────────────────────
+
+function setupSSEHeaders(res: Response): void {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+}
 
 function streamSSE(res: Response, content: string): void {
-  // Copilot Extension protocol: SSE with ChatCompletion-style chunks
   const chunks = splitIntoChunks(content, 80);
-
   for (const chunk of chunks) {
-    const payload = JSON.stringify({
-      choices: [{ index: 0, delta: { content: chunk } }],
-    });
-    res.write(`data: ${payload}\n\n`);
+    res.write(`data: ${JSON.stringify({ choices: [{ index: 0, delta: { content: chunk } }] })}\n\n`);
   }
-
   res.write('data: [DONE]\n\n');
   res.end();
 }
 
 function splitIntoChunks(text: string, maxLen: number): string[] {
   const chunks: string[] = [];
-  for (let i = 0; i < text.length; i += maxLen) {
-    chunks.push(text.slice(i, i + maxLen));
-  }
+  for (let i = 0; i < text.length; i += maxLen) chunks.push(text.slice(i, i + maxLen));
   return chunks.length > 0 ? chunks : [''];
 }
 
-function setupSSEHeaders(res: Response): void {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+// ── Copilot webhook body ──────────────────────────────────────
+
+interface CopilotMessage { role: 'user' | 'assistant' | 'system'; content: string; }
+interface CopilotBody { messages?: CopilotMessage[]; }
+
+function getLastUserMessage(body: CopilotBody): string {
+  const msgs = (body.messages ?? []).filter(m => m.role === 'user');
+  return msgs[msgs.length - 1]?.content ?? '';
 }
 
-// ── Parse incoming Copilot Extension webhook ───────────────
-
-interface CopilotMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
+function extractUserId(req: Request): string {
+  return (req.headers['x-github-token'] as string)?.slice(0, 16) ?? req.ip ?? 'anon';
 }
 
-interface CopilotWebhookBody {
-  messages?: CopilotMessage[];
+// ── Intent detection ──────────────────────────────────────────
+
+function isInstrumentCommand(msg: string): boolean {
+  return /instrument|analyze|scan|parse/i.test(msg);
 }
 
-function extractUserMessage(body: CopilotWebhookBody): string {
-  if (!body.messages || body.messages.length === 0) {
-    return '';
+function isSelectionResponse(msg: string): boolean {
+  // Matches "1,2,3" or "all" or "1 2 3" or "yes" or "generate 1,2"
+  return /^(all|yes|\d[\d,\s]*)$/i.test(msg.trim()) ||
+    /generate\s+(all|\d[\d,\s]*)/i.test(msg);
+}
+
+function parseSelection(msg: string, maxIndex: number): number[] | 'all' {
+  if (/all|yes/i.test(msg)) return 'all';
+  const nums = msg.match(/\d+/g)?.map(Number).filter(n => n >= 1 && n <= maxIndex) ?? [];
+  return nums;
+}
+
+function extractSourceCode(msg: string): string | null {
+  // Look for code block ```tsx\n...\n``` or raw JSX/HTML
+  const fence = msg.match(/```(?:tsx?|jsx?|html?)?\s*\n([\s\S]+?)\n```/i);
+  if (fence) return fence[1].trim();
+
+  // Heuristic: message contains JSX-like content
+  if (/<[A-Za-z]/.test(msg) && msg.length > 200) return msg;
+  return null;
+}
+
+// ── Proposal markdown formatter ───────────────────────────────
+
+function formatProposals(proposals: ToolProposal[]): string {
+  const RISK_EMOJI: Record<string, string> = {
+    safe: '🟢', caution: '🟡', destructive: '🔴', excluded: '⚫',
+  };
+
+  const lines = [
+    '## 🔧 WebMCP Tool Proposals\n',
+    'I found the following instrumentable actions:\n',
+  ];
+
+  for (const p of proposals) {
+    const emoji = RISK_EMOJI[p.risk] ?? '⚪';
+    const pre = p.selected ? '✅' : '⬜';
+    const fields = Object.keys(p.inputSchema.properties).join(', ') || 'none';
+    lines.push(`${pre} **[${p.index}] ${p.name}** ${emoji} \`${p.risk}\``);
+    lines.push(`   ${p.description}`);
+    lines.push(`   Fields: \`${fields}\``);
+    lines.push('');
   }
-  // The last user message is the current prompt
-  const userMessages = body.messages.filter(m => m.role === 'user');
-  return userMessages[userMessages.length - 1]?.content || '';
+
+  lines.push('---');
+  lines.push('Reply with the tool numbers to generate (e.g. `1,2`) or `all` to generate all safe tools.');
+  lines.push('Destructive tools (🔴) are unchecked by default — include their number explicitly to generate them.');
+
+  return lines.join('\n');
 }
 
-// ── Main webhook handler ───────────────────────────────────
+// ── Main webhook handler ──────────────────────────────────────
 
 agentRouter.post('/', async (req: Request, res: Response) => {
-  const body = req.body as CopilotWebhookBody;
-  const userMessage = extractUserMessage(body);
-  const token = req.headers['x-github-token'] as string | undefined;
+  const body = req.body as CopilotBody;
+  const userMessage = getLastUserMessage(body);
+  const userId = extractUserId(req);
 
   setupSSEHeaders(res);
 
-  // Phase 0: Echo-style response to prove the E2E works
   if (!userMessage) {
-    streamSSE(res, '👋 Hi! I\'m the **WebMCP Auto-Instrumentor**. Send me a React component and I\'ll propose MCP tools for it.\n\nUsage: `@webmcp instrument` followed by pasting your component code.');
+    streamSSE(res, '👋 **WebMCP Auto-Instrumentor**\n\nSend me a React component to instrument:\n```\n@webmcp instrument\n```tsx\n// paste your component here\n```\n```');
     return;
   }
 
-  // Detect "instrument" command
-  const isInstrument = /instrument/i.test(userMessage);
+  // ── Turn 1: Instrument command + source code ────────────────
+  if (isInstrumentCommand(userMessage)) {
+    const sourceCode = extractSourceCode(userMessage);
 
-  if (isInstrument) {
-    // For now, acknowledge the intent and show what's coming
-    const response = [
-      '🔍 **WebMCP Auto-Instrumentor**\n',
-      'I detected an `instrument` request. Here\'s what I\'ll do:\n',
-      '1. Parse your React/HTML component\n',
-      '2. Identify interactive elements (forms, buttons, inputs)\n',
-      '3. Classify risk level (safe / caution / destructive)\n',
-      '4. Propose MCP tools for your review\n',
-      '5. Generate handler code for the tools you select\n',
-      '\n---\n',
-      '⚙️ **Status:** Parser not yet connected (Phase 1).\n',
-      'The server is running and the extension pipeline works end-to-end! 🎉\n',
-      token ? '\n✅ GitHub token received — auth is working.' : '\n⚠️ No GitHub token received.',
-    ].join('');
+    if (!sourceCode) {
+      streamSSE(res, '🔍 **WebMCP Auto-Instrumentor**\n\nPlease paste your component code after the `instrument` command:\n\n````\n@webmcp instrument\n```tsx\nexport default function MyForm() { ... }\n```\n````');
+      return;
+    }
 
-    streamSSE(res, response);
+    try {
+      // Detect file type (tsx by default)
+      const fileName = 'component.tsx';
+      const analysis = parseFile(sourceCode, fileName);
+      const proposals = buildProposals(analysis);
+
+      if (proposals.length === 0) {
+        streamSSE(res, '⚠️ **No instrumentable elements found**\n\nThis component has no forms, buttons, or interactive elements that can be wrapped as MCP tools.\n\nTry pointing at a specific page or form component.');
+        return;
+      }
+
+      // Cache proposals for the follow-up turn
+      const hash = createHash('sha256').update(sourceCode).digest('hex').slice(0, 12);
+      cacheProposal(userId, hash, { proposals, analysis, sourceCode, sourceHash: hash });
+
+      streamSSE(res, formatProposals(proposals));
+    } catch (err) {
+      streamSSE(res, `❌ **Parse error**\n\n\`${(err as Error).message}\`\n\nMake sure you're pasting valid .tsx or .jsx source code.`);
+    }
     return;
   }
 
-  // Default: help message
+  // ── Turn 2: User replied with selection ─────────────────────
+  if (isSelectionResponse(userMessage)) {
+    const cached = getLatestProposal(userId);
+
+    if (!cached) {
+      streamSSE(res, '⏲️ **No active proposal found**\n\nYour tool proposal may have expired (5 min timeout). Run `@webmcp instrument` again to get a fresh proposal.');
+      return;
+    }
+
+    const selectionResult = parseSelection(userMessage, cached.proposals.length);
+    const selected = selectionResult === 'all'
+      ? cached.proposals.filter(p => p.risk !== 'excluded')
+      : cached.proposals.filter(p =>
+        Array.isArray(selectionResult) && selectionResult.includes(p.index)
+      );
+
+    if (selected.length === 0) {
+      streamSSE(res, '⚠️ **No valid tools selected.**\n\nPlease reply with tool numbers (e.g. `1,2`) or `all`.');
+      return;
+    }
+
+    try {
+      const llm = new NoneAdapter();
+      const code = await generateMCPCode(selected, {
+        format: 'iife',
+        framework: cached.analysis.framework,
+        llm,
+        sourceExcerpt: cached.sourceCode.slice(0, 1000),
+      });
+
+      const response = [
+        `✅ **Generated ${selected.length} MCP tool(s)**\n`,
+        `\`\`\`javascript\n${code}\n\`\`\`\n`,
+        `Add \`<script src="https://unpkg.com/@webmcp/runtime"></script>\` to your page, then include this file.`,
+      ].join('\n');
+
+      streamSSE(res, response);
+    } catch (err) {
+      streamSSE(res, `❌ **Code generation error**\n\n${(err as Error).message}`);
+    }
+    return;
+  }
+
+  // ── Default: help message ───────────────────────────────────
   streamSSE(res, [
-    '🤖 **WebMCP Auto-Instrumentor**\n\n',
-    'Available commands:\n',
-    '- `instrument` — Analyze a component and propose MCP tools\n',
-    '- `help` — Show this message\n',
-    '\nPaste a React component (.tsx/.jsx) or HTML file after the `instrument` command.',
+    '🤖 **WebMCP Auto-Instrumentor**\n',
+    'Commands:\n',
+    '- `instrument` + paste your component → analyze and propose MCP tools\n',
+    '- Reply with tool numbers (e.g. `1,2` or `all`) → generate handler code\n',
+    '- `help` → show this message',
   ].join(''));
 });
