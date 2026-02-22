@@ -71,12 +71,10 @@ function findComponents(sourceFile: SourceFile): FunctionLike[] {
     // 1. export default function MyComponent() {}
     // 2. export function MyComponent() {}
     for (const fn of sourceFile.getFunctions()) {
-        if (fn.isExported() || fn.isDefaultExport()) {
-            if (returnsJSX(fn)) results.push(fn);
-        }
+        if (returnsJSX(fn)) results.push(fn);
     }
 
-    // 3. export const MyComponent = () => {} / function() {}
+    // 2. const MyComponent = () => {} / function() {}
     for (const varDecl of sourceFile.getVariableDeclarations()) {
         const init = varDecl.getInitializer();
         if (!init) continue;
@@ -84,8 +82,7 @@ function findComponents(sourceFile: SourceFile): FunctionLike[] {
             init.asKind(SyntaxKind.ArrowFunction) ??
             init.asKind(SyntaxKind.FunctionExpression);
         if (!fn) continue;
-        const varStmt = varDecl.getVariableStatement();
-        if (varStmt?.isExported() && returnsJSX(fn)) {
+        if (returnsJSX(fn)) {
             results.push(fn);
         }
     }
