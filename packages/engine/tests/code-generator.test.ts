@@ -66,6 +66,14 @@ describe('generateMCPCodeSync', () => {
         expect(count).toBe(2);
     });
 
+    it('matches snapshot for complete generated code (ContactForm)', () => {
+        const { analysis, proposals } = loadProposals('ContactForm.tsx');
+        const code = generateMCPCodeSync(proposals, { format: 'iife', framework: analysis.framework });
+        // Stable snapshot requires removing the hash which changes based on content/tools selected,
+        // though the hash implementation here is deterministic since the tools are stable.
+        expect(code).toMatchSnapshot();
+    });
+
     it('emits the auto-generated header comment', () => {
         const { analysis, proposals } = loadProposals('ContactForm.tsx');
         const code = generateMCPCodeSync(proposals, { format: 'iife', framework: analysis.framework });
