@@ -3,9 +3,9 @@ import { buildSelector, buildSetCall, buildSubmitCall } from '../generator/frame
 
 // ── LLM prompts ───────────────────────────────────────────────
 
-export function buildHandlerPrompt(tool: ToolProposal, sourceExcerpt?: string): string {
+export function buildHandlerPrompt(tool: ToolProposal): string {
     const fields = Object.entries(tool.inputSchema.properties)
-        .map(([k, v]) => `  - ${k} (${(v as any).type}): ${(v as any).description}`)
+        .map(([k, v]) => `  - ${k} (${(v as { type: string }).type}): ${(v as { description: string }).description}`)
         .join('\n');
 
     const selectors = tool.sourceMapping.inputElements
@@ -16,43 +16,56 @@ export function buildHandlerPrompt(tool: ToolProposal, sourceExcerpt?: string): 
         ? buildSelector(tool.sourceMapping.triggerElement)
         : 'unknown';
 
+    // ── Key improvement: use the actual handler body as context ──
+    const handler = tool.sourceMapping.handler;
+    let handlerContext = '';
+
+    if (handler?.body) {
+        handlerContext = `\nOriginal handler source (${handler.name}):\n\`\`\`javascript\n${handler.body.slice(0, 600)}\n\`\`\``;
+    }
+
+    if (handler?.apiCalls && handler.apiCalls.length > 0) {
+        const calls = handler.apiCalls
+            .map(c => `  ${c.method} ${c.url}`)
+            .join('\n');
+        handlerContext += `\nAPI calls made by this handler:\n${calls}`;
+    }
+
     return `You are generating a JavaScript handler for an MCP (Model Context Protocol) tool.
 
 Tool name: ${tool.name}
 Description: ${tool.description}
 
-Input parameters:
+Input parameters (what the AI agent will provide):
 ${fields || '  (none)'}
 
-Known DOM selectors:
-${selectors || '  (none)'}
+DOM selectors to use:
+${selectors || '  (none — use the submit trigger directly'}
 Trigger selector: ${triggerSel}
-
-Available DOM helpers (already defined in scope):
-- __mcpSetValue(selector, value) — sets input/textarea value, triggers React events
+${handlerContext}
+Available DOM helpers (already in scope):
+- __mcpSetValue(selector, value) — sets input/textarea value, fires React change events
 - __mcpSetChecked(selector, checked) — sets checkbox state
 - __mcpSetSelect(selector, value) — sets select dropdown value
-- __mcpClick(selector) — clicks a button/element
+- __mcpClick(selector) — clicks a button or element
 
-${sourceExcerpt ? `Source context:\n\`\`\`tsx\n${sourceExcerpt.slice(0, 800)}\n\`\`\`` : ''}
-
-Generate ONLY the async handler function body (the code inside async (params) => { ... }).
+Generate ONLY the async handler body (statements inside async (params) => { ... }).
 Requirements:
-1. Use the helpers above to fill each input field using the params values
-2. After filling fields, trigger the submit/action
+1. Fill each input field using the matching param value and the selector above
+2. After filling all fields, trigger the action using __mcpClick on the trigger selector
 3. Return { success: true, message: '...' } on success
-4. Wrap in try/catch, return { success: false, message: err.message } on error
-5. Use ONLY the selectors listed above — do not invent new ones
-6. Do NOT include any function declaration — just the body statements
+4. Wrap everything in try/catch, return { success: false, message: err.message } on error
+5. Use ONLY the selectors listed — do not invent selectors
+6. If the handler makes an API call (listed above), reflect that in the success message
 
-Respond with ONLY the handler body code. No markdown, no explanation.`;
+Output ONLY the handler body. No markdown, no function declaration, no explanation.`;
 }
 
 // ── Template handler (no LLM) ─────────────────────────────────
 
 /**
- * Build a template handler body from AST data alone — no LLM needed.
- * Produces valid but generic handler code using the known selectors.
+ * Build a deterministic template handler from AST data — no LLM.
+ * Uses the concrete selectors already found by the parser.
  */
 export function buildTemplateHandler(tool: ToolProposal): string {
     const lines: string[] = ['try {'];
@@ -66,15 +79,24 @@ export function buildTemplateHandler(tool: ToolProposal): string {
         lines.push(`  ${setCall};`);
     }
 
+    // Give React a tick to process state updates
+    if (tool.sourceMapping.inputElements.length > 0) {
+        lines.push(`  await new Promise(r => setTimeout(r, 100));`);
+    }
+
     // Trigger the action
     const triggerCall = buildSubmitCall(tool.sourceMapping.triggerElement);
     if (triggerCall && !triggerCall.startsWith('/*')) {
-        lines.push(`  // Small delay to let React process state updates`);
-        lines.push(`  await new Promise(r => setTimeout(r, 100));`);
         lines.push(`  ${triggerCall};`);
     }
 
-    lines.push(`  return { success: true, message: 'Action completed successfully' };`);
+    // Build a meaningful success message from API call info if available
+    const apiCalls = tool.sourceMapping.handler?.apiCalls;
+    const successMsg = apiCalls && apiCalls.length > 0
+        ? `${tool.sourceMapping.handler?.name ?? 'Action'} triggered (${apiCalls[0].method} ${apiCalls[0].url})`
+        : 'Action completed successfully';
+
+    lines.push(`  return { success: true, message: ${JSON.stringify(successMsg)} };`);
     lines.push(`} catch (err) {`);
     lines.push(`  return { success: false, message: err instanceof Error ? err.message : String(err) };`);
     lines.push(`}`);
@@ -89,31 +111,35 @@ import type { LLMAdapter } from '../types.js';
 export async function generateHandlerWithLLM(
     tool: ToolProposal,
     llm: LLMAdapter,
-    sourceExcerpt?: string,
 ): Promise<string> {
-    const prompt = buildHandlerPrompt(tool, sourceExcerpt);
+    // Template-mode adapters skip the LLM call entirely
+    if (llm.name === 'Template-only (no LLM)') {
+        return buildTemplateHandler(tool);
+    }
+
+    const prompt = buildHandlerPrompt(tool);
 
     try {
         const body = await llm.generate([
             {
                 role: 'system',
-                content: 'You are a precise code generator. Output only the requested code, no markdown fences, no explanation.',
+                content: 'You are a precise JavaScript code generator. Output only the requested code. No markdown, no explanation.',
             },
             {
                 role: 'user',
                 content: prompt,
             },
-        ], { temperature: 0.1 });
+        ], { temperature: 0.1, maxTokens: 800 });
 
-        // Basic sanity: must contain a return statement
-        if (!body.includes('return')) {
-            console.warn(`[WebMCP] LLM handler missing return statement — falling back to template`);
+        // Sanity check: must contain a return statement
+        if (!body || !body.includes('return')) {
+            console.warn(`[WebMCP] LLM returned invalid handler — falling back to template`);
             return buildTemplateHandler(tool);
         }
 
         return body.trim();
     } catch (err) {
-        console.warn(`[WebMCP] LLM handler generation failed — falling back to template. Error: ${(err as Error).message}`);
+        console.warn(`[WebMCP] LLM error (${(err as Error).message}) — falling back to template`);
         return buildTemplateHandler(tool);
     }
 }

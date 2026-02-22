@@ -18,6 +18,7 @@ program
   .option('--all', 'Accept all tools including destructive (use with caution)')
   .option('--select <indices>', 'Comma-separated indices of tools to generate (e.g., "1,3,5")')
   .option('--llm <backend>', 'LLM backend: openai | github-models | ollama | none')
+  .option('--model <name>', 'Model name for the chosen LLM backend (e.g. gpt-4o, llama3, phi3)')
   .option('--format <format>', 'Output format: iife | esm | auto', 'auto')
   .action(instrumentCommand);
 

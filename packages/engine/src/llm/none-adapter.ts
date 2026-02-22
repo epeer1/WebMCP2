@@ -8,11 +8,12 @@ export class NoneAdapter implements LLMAdapter {
     readonly name = 'Template-only (no LLM)';
 
     async generate(_messages: LLMMessage[]): Promise<string> {
-        throw new Error('[NoneAdapter] Freeform generation not supported. Use generateJSON with structured prompts.');
+        // Safe no-op — callers should use generateHandler() instead
+        return '';
     }
 
     async generateJSON<T>(_messages: LLMMessage[], _options?: LLMOptions): Promise<T> {
-        throw new Error('[NoneAdapter] Use buildTemplateHandler() directly instead of generateJSON.');
+        throw new Error('[NoneAdapter] generateJSON not supported. Use buildTemplateHandler() directly.');
     }
 
     async isAvailable(): Promise<boolean> {
