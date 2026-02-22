@@ -3,11 +3,17 @@ import { resolve, basename, extname } from 'node:path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { checkbox } from '@inquirer/prompts';
-import { parseFile } from '@webmcp/engine/parser';
-import { buildProposals } from '@webmcp/engine/proposal';
-import { generateMCPCode } from '@webmcp/engine/generator';
-import { detectLLMBackend } from '@webmcp/engine/llm';
-import type { ToolProposal } from '@webmcp/engine';
+import {
+  parseFile,
+  buildProposals,
+  generateMCPCode,
+  detectLLMBackend,
+  WebMCPError,
+  formatError,
+  loadConfig,
+  type OutputFormat,
+  type ToolProposal,
+} from '@webmcp/engine';
 
 interface InstrumentOptions {
   output?: string;
@@ -35,14 +41,14 @@ export async function instrumentCommand(
 
   // 1. Validate file
   if (!existsSync(filePath)) {
-    console.error(chalk.red(`\n✖ File not found: ${filePath}`));
+    console.error(chalk.red(`\n✖ File not found: ${filePath} `));
     console.error(chalk.gray('  Check the path and try again.\n'));
     process.exit(1);
   }
 
   const ext = extname(filePath).toLowerCase();
   if (!['.tsx', '.jsx', '.html', '.htm'].includes(ext)) {
-    console.error(chalk.red(`\n✖ Unsupported file type: ${ext}`));
+    console.error(chalk.red(`\n✖ Unsupported file type: ${ext} `));
     console.error(chalk.gray('  Supported: .tsx, .jsx, .html\n'));
     process.exit(1);
   }
@@ -53,7 +59,7 @@ export async function instrumentCommand(
     const { NoneAdapter } = require('@webmcp/engine/llm');
     return new NoneAdapter();
   });
-  llmSpinner.succeed(`Using: ${chalk.cyan(llm.name)}`);
+  llmSpinner.succeed(`Using: ${chalk.cyan(llm.name)} `);
 
   // 3. Parse
   const spinner = ora('Parsing component...').start();
@@ -78,7 +84,7 @@ export async function instrumentCommand(
   }
 
   // 5. Print proposal table
-  console.log(chalk.green(`\n✔ Found ${proposals.length} tool proposal(s)\n`));
+  console.log(chalk.green(`\n✔ Found ${proposals.length} tool proposal(s) \n`));
   printProposalTable(proposals);
 
   if (options.dryRun) {
@@ -91,7 +97,7 @@ export async function instrumentCommand(
 
   if (options.yes) {
     selected = proposals.filter(p => p.risk !== 'destructive' && p.risk !== 'excluded');
-    console.log(chalk.blue(`ℹ Auto-selecting ${selected.length} safe/caution tool(s).\n`));
+    console.log(chalk.blue(`ℹ Auto - selecting ${selected.length} safe / caution tool(s).\n`));
   } else if (options.all) {
     selected = proposals.filter(p => p.risk !== 'excluded');
     console.log(chalk.blue(`ℹ Selecting all ${selected.length} tool(s).\n`));
@@ -103,7 +109,7 @@ export async function instrumentCommand(
     const choices = proposals
       .filter(p => p.risk !== 'excluded')
       .map(p => ({
-        name: `${RISK_BADGE[p.risk]} [${p.index}] ${p.name} — ${p.description}`,
+        name: `${RISK_BADGE[p.risk]} [${p.index}] ${p.name} — ${p.description} `,
         value: p.index,
         checked: p.selected,
       }));
@@ -126,14 +132,15 @@ export async function instrumentCommand(
   let code: string;
   try {
     code = await generateMCPCode(selected, {
-      format: 'iife',
+      format: options.format === 'auto'
+        ? (options.output?.endsWith('.ts') ? 'esm' : 'iife')
+        : options.format as OutputFormat,
       framework: analysis.framework,
       llm,
-      sourceExcerpt: source.slice(0, 2000),
     });
     genSpinner.succeed(`Generated ${selected.length} tool(s)`);
   } catch (err) {
-    genSpinner.fail(`Generation error: ${(err as Error).message}`);
+    genSpinner.fail(`Generation error: ${(err as Error).message} `);
     process.exit(1);
   }
 
@@ -141,10 +148,10 @@ export async function instrumentCommand(
   const outputPath = options.output ?? deriveOutputPath(filePath);
   writeFileSync(outputPath, code, 'utf-8');
 
-  console.log(chalk.green(`\n📄 Written to: ${outputPath}\n`));
+  console.log(chalk.green(`\n📄 Written to: ${outputPath} \n`));
   console.log(chalk.gray('  Next steps:'));
   console.log(chalk.gray('  1. Add <script src="https://unpkg.com/@webmcp/runtime"></script> to your page'));
-  console.log(chalk.gray(`  2. Add <script src="${basename(outputPath)}"></script> after the runtime\n`));
+  console.log(chalk.gray(`  2. Add < script src = "${basename(outputPath)}" > </script> after the runtime\n`));
 }
 
 // ── Helpers ───────────────────────────────────────────────────

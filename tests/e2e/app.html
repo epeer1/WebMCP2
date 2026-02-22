@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>E2E Test App</title>
+    <!-- Load React & ReactDOM via CDN for standalone test -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Load WebMCP Runtime Script (mocked for absolute simplicity in this test) -->
+    <script>
+        window.mcp = {
+            tools: new Map(),
+            registerTool(tool) {
+                this.tools.set(tool.name, tool);
+                console.log(`[Runtime] Registered tool: ${tool.name}`);
+            }
+        };
+    </script>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <!-- A React Component to test against -->
+    <script type="text/babel">
+        const { useState } = React;
+
+        function TestForm() {
+            const [name, setName] = useState('');
+            const [email, setEmail] = useState('');
+            const [submitted, setSubmitted] = useState(false);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setSubmitted(true);
+                console.log(`[App] Submitted: ${name} <${email}>`);
+            }
+
+            if (submitted) {
+                return <div id="success-banner">Thank you, {name}!</div>;
+            }
+
+            return (
+                <form onSubmit={handleSubmit}>
+                    <input
+                        id="name"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder="Name"
+                    />
+                    <input
+                        id="email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        placeholder="Email"
+                    />
+                    <button type="submit">Submit</button>
+                </form>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<TestForm />);
+    </script>
+
+    <!-- The generated Tool from WebMCP Engine -->
+    <script>
+        // ── WebMCP DOM helpers ──────────────────────────────────────
+        function __mcpSetValue(selector, value) {
+            const el = document.querySelector(selector);
+            if (!el) throw new Error('[WebMCP] Element not found: ' + selector);
+            // Use native setter to bypass React's value tracking
+            const proto = el instanceof HTMLTextAreaElement
+                ? HTMLTextAreaElement.prototype
+                : HTMLInputElement.prototype;
+            const nativeSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+            if (nativeSetter) {
+                nativeSetter.call(el, value);
+            } else {
+                el.value = value;
+            }
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        function __mcpClick(selector) {
+            const el = document.querySelector(selector);
+            if (!el) throw new Error('[WebMCP] Element not found: ' + selector);
+            el.click();
+        }
+        // ────────────────────────────────────────────────────────────
+
+        window.mcp.registerTool({
+            name: "submit_test_form",
+            handler: async (params) => {
+                __mcpSetValue('#name', params.name);
+                __mcpSetValue('#email', params.email);
+                __mcpClick('button[type="submit"]');
+                return { success: true };
+            }
+        });
+    </script>
+</body>
+
+</html>
