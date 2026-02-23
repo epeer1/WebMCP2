@@ -73,7 +73,7 @@ function buildToolRegistration(tool: ToolProposal, handlerBody: string): string 
     .trimStart();
 
   return `
-window.mcp.registerTool({
+const tool_${tool.name} = {
   name: ${JSON.stringify(tool.name)},
   description: ${JSON.stringify(tool.description)},
   inputSchema: {
@@ -84,7 +84,14 @@ window.mcp.registerTool({
   handler: async (params) => {
 ${indentBody(handlerBody, 4)}
   }
-});`;
+};
+
+if (typeof navigator !== 'undefined' && 'modelContext' in navigator) {
+  navigator.modelContext.registerTool(tool_${tool.name});
+} else {
+  window.mcp = window.mcp || { registerTool: () => {} };
+  window.mcp.registerTool(tool_${tool.name});
+}`;
 }
 
 function formatOutput(toolRegistrations: string[], sourceHash: string, modeComment: string): string {

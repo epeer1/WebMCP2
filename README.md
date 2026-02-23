@@ -1,8 +1,8 @@
-# WebMCP 🕷️
+# WebMCP Instrumentor 🕷️
 
-**The Native Bridge Between AI Agents and Web UIs.**
+**The Authoring Toolchain for AI-Native Web UIs**
 
-WebMCP is a zero-config CLI that automatically parses your React/HTML components and **generates native Model Context Protocol (MCP) tools**. It allows any AI agent (like GitHub Copilot, Claude CLI, Cursor) to physically interact with your web application in real-time—filling out forms, clicking buttons, and driving the UI exactly as a human would.
+WebMCP Instrumentor is a zero-config CLI that automatically parses your React/HTML components and **generates WebMCP tools**. It allows any AI agent (like GitHub Copilot, Claude CLI, Cursor) to physically interact with your web application in real-time—filling out forms, clicking buttons, and driving the UI safely using LLM-generated handlers and powerful risk taxonomies.
 
 ---
 
@@ -44,7 +44,7 @@ When you point WebMCP at a source file (React `.tsx` or pure `.html`), the Engin
 2. **Proposal Building:** Groups related inputs (e.g., all fields within a `<form>`) into cohesive "Tool Candidates".
 3. **Risk Classification:** Analyzes button labels (`"Delete Account"` vs `"Save"`) to automatically classify tools as `safe`, `caution`, or `destructive`. Destructive tools are excluded by default for safety.
 4. **LLM Code Generation:** Instead of relying purely on fragile templates, WebMCP passes the specifically zoomed-in event handler to an LLM of your choice (via `--llm github-models`). We instruct it to map semantic intentions to physical DOM selectors.
-5. **Output Generation:** Emits a `.mcp.js` file wrapping everything in `window.mcp.registerTool({ ... })` along with specialized framework-bypassing DOM setters like `__mcpSetValue()`.
+5. **Output Generation:** Emits a `.mcp.js` file using a **native-first, polyfill fallback** design. It registers the tool to Chrome 146's native `navigator.modelContext` if available, otherwise falling back to our `@webmcp/runtime` injection. Includes specialized framework-bypassing DOM setters like `__mcpSetValue()`.
 
 ### 2. The Browser Runtime (`@webmcp/runtime`)
 
@@ -96,14 +96,15 @@ All definitions can be overridden manually by supplying a `classifications` map 
 
 ---
 
-## 🔮 V2 Roadmap & Experimental WebMCP
+## 🔮 Native WebMCP Support & V2 Roadmap
 
-As of early 2026, Chrome 146+ has released experimental support for **native WebMCP** (`navigator.modelContext`).
+As of early 2026, Chrome 146+ has released experimental support for **native WebMCP** via `navigator.modelContext`.
 
-Currently, WebMCP projects rely on the `@webmcp/runtime` package to polyfill this connection to your AI agents. As browser vendors adopt the W3C WebML standard, the CLI will transparently switch to generating purely native code:
-`navigator.modelContext.registerTool({ ... })`
+WebMCP Instrumentor is fully future-proofed and acts as an immediate bridge to this new standard. Upon code generation, our tools execute a **native-first polyfill fallback**:
+1. If `navigator.modelContext` exists (Chrome 146+ with flags enabled), the tool registers directly to the spec.
+2. Otherwise, it falls back to our `@webmcp/runtime` script injection, enabling identical behavior today across all browsers.
 
-Until then, your `@webmcp/runtime` script bridge allows your site to participate in the exact same AI ecosystem today.
+This turns our engine into a full **authoring toolchain** for building out the upcoming W3C Web Machine Learning specification, giving you React AST understanding, risk taxonomies, and LLM-driven selectors straight out of the box.
 
 ---
 

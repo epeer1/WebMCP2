@@ -49,7 +49,7 @@ function __mcpClick(selector) {
 // ────────────────────────────────────────────────────────────
 
 
-window.mcp.registerTool({
+const tool_send_contact_form = {
   name: "send_contact_form",
   description: "Send the form with: name, email, message",
   inputSchema: {
@@ -82,6 +82,13 @@ window.mcp.registerTool({
       return { success: false, message: err instanceof Error ? err.message : String(err) };
     }
   }
-});
+};
+
+if (typeof navigator !== 'undefined' && 'modelContext' in navigator) {
+  navigator.modelContext.registerTool(tool_send_contact_form);
+} else {
+  window.mcp = window.mcp || { registerTool: () => {} };
+  window.mcp.registerTool(tool_send_contact_form);
+}
 "
 `;

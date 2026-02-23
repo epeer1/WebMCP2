@@ -63,25 +63,29 @@ While the unit tests (57 tests) and Playwright E2E suite are green, the followin
 
 ---
 
-## 🔮 V2 Roadmap (Chrome Native Integration)
+## 🔮 Native WebMCP Support & V2 Roadmap
 
-As of February 2026, Google Chrome (v146+) has launched experimental native support for **WebMCP** via the `#experimental-web-platform-features` flag.
+As of February 2026, Google Chrome (v146+) has launched experimental native support for **WebMCP** via the `navigator.modelContext` API.
 
-Our architecture is perfectly positioned to support this new standard in Phase 5:
+Our architecture has been updated to immediately bridge this standard via a **native-first polyfill fallback**:
 
-**1. The Native API Shift**
-Currently, our `webmcp` CLI generates tools targeting our user-space polyfill:
-`window.mcp.registerTool({ ... })`
+**1. The Native API Shift (Implemented)**
+Currently, the `webmcp` CLI generator emits code that targets the new native API first, falling back to our user-space polyfill if absent:
+```javascript
+if (typeof navigator !== 'undefined' && 'modelContext' in navigator) {
+  navigator.modelContext.registerTool(toolDef);
+} else {
+  // Fallback to our injection
+  window.mcp.registerTool(toolDef);
+}
+```
 
-In V2, the CLI generator will simply be updated to target the new native API:
-`navigator.modelContext.registerTool({ ... })`
+**2. The `@webmcp/runtime` Pivot (Implemented)**
+With the above fallback, our `@webmcp/runtime` package successfully acts as the **official polyfill** (similar to the `@mcp-b/global` reference) for older browsers or those without the `#experimental-web-platform-features` flag enabled.
 
-**2. Declarative HTML Generation**
+**3. Declarative HTML Generation (Planned V2)**
 Chrome 146 introduced a declarative DOM API. For static sites without JS, our HTML parser could be updated to automatically inject these new standard attributes into the source files:
 `<form toolname="book_appointment" tooldescription="..." toolautosubmit="true">`
-
-**3. The `@webmcp/runtime` Pivot**
-Once all major browsers support `navigator.modelContext` natively, our `@webmcp/runtime` package can pivot from being the execution engine to acting as the **official polyfill** (similar to `@mcp-b/global`) for older browsers.
 
 ---
 
