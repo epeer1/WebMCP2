@@ -1,8 +1,8 @@
-# WebMCP Project Status & Next Steps
+# WebMCP Instrumentor: Project Status
 
 ## 🎯 What We Accomplished
 
-According to the `IMPLEMENTATION_DESIGN.md` and our technical plans, we have successfully developed WebMCP from the ground up across 4 major phases. 
+According to the `IMPLEMENTATION_DESIGN.md` and our technical plans, we have successfully developed the WebMCP Instrumentor from the ground up across 4 major phases. 
 
 ### Phase 1: Core Engine & AST Parsing
 *   **React Parser**: We built a robust parser using `ts-morph` that extracts React components, state variables (`useState`), form elements, and event handlers (`onSubmit`, `onClick`).
@@ -20,7 +20,7 @@ According to the `IMPLEMENTATION_DESIGN.md` and our technical plans, we have suc
 *   **HTML Parser**: We implemented parsing for raw `.html` files using `htmlparser2`, extracting standard form inputs and native groupings.
 *   **Config Loader**: We integrated `cosmiconfig` to support custom `.webmcprc.json` files for user-defined configuration and risk overrides.
 *   **Error Taxonomy**: We categorized errors into clear, typed `WebMCPError` classes to provide actionable feedback (e.g., `MISSING_API_KEY`).
-*   **`webmcp init`**: We created the initialization command to quickly scaffold the configuration in a user's project.
+*   **`webmcp init`**: We created the initialization command to quickly scaffold the WebMCP Instrumentor configuration in a user's project.
 
 ### Phase 4: E2E Validation & Packaging
 *   **Playwright E2E Browser Testing**: We proved the architecture works in a real browser. Playwright loads React, injects our generated tools, executes the agent handler, and successfully verifies the UI state updates natively.

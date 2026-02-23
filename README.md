@@ -8,7 +8,7 @@ WebMCP Instrumentor is a zero-config CLI that automatically parses your React/HT
 
 ## ⚡ Quickstart
 
-1. **Initialize WebMCP in your project:**
+1. **Initialize WebMCP Instrumentor in your project:**
    ```bash
    npx webmcp init
    ```
@@ -17,7 +17,7 @@ WebMCP Instrumentor is a zero-config CLI that automatically parses your React/HT
    ```bash
    npx webmcp instrument src/components/ContactForm.tsx
    ```
-   WebMCP will parse the React AST, find all interactive forms/buttons, and use an LLM (OpenAI, GitHub Models, or Ollama) to generate the exact JavaScript DOM handlers needed to drive them.
+   The instrumentor will parse the React AST, find all interactive forms/buttons, and use an LLM (OpenAI, GitHub Models, or Ollama) to generate the exact JavaScript DOM handlers needed to drive them.
 
 3. **Drop the generated file into your app:**
    ```html
@@ -34,16 +34,16 @@ That's it! If you have a locally running Copilot Extension or MCP server connect
 
 ## 🏗️ How it Works
 
-WebMCP operates in two phases: the **Build-time Instrumentor** and the **Browser Runtime**.
+WebMCP Instrumentor operates in two phases: the **Build-time Instrumentor** and the **Browser Runtime**.
 
 ### 1. The Build-Time Engine (`webmcp instrument`)
 
-When you point WebMCP at a source file (React `.tsx` or pure `.html`), the Engine goes through a pipeline:
+When you point the instrumentor at a source file (React `.tsx` or pure `.html`), the Engine goes through a pipeline:
 
 1. **AST / HTML Parsing:** Uses `ts-morph` (for React) or `htmlparser2` (for HTML) to deeply understand the component's structure, extracting `useState` bindings, inputs, textareas, selects, and form submission boundaries.
 2. **Proposal Building:** Groups related inputs (e.g., all fields within a `<form>`) into cohesive "Tool Candidates".
 3. **Risk Classification:** Analyzes button labels (`"Delete Account"` vs `"Save"`) to automatically classify tools as `safe`, `caution`, or `destructive`. Destructive tools are excluded by default for safety.
-4. **LLM Code Generation:** Instead of relying purely on fragile templates, WebMCP passes the specifically zoomed-in event handler to an LLM of your choice (via `--llm github-models`). We instruct it to map semantic intentions to physical DOM selectors.
+4. **LLM Code Generation:** Instead of relying purely on fragile templates, the engine passes the specifically zoomed-in event handler to an LLM of your choice (via `--llm github-models`). We instruct it to map semantic intentions to physical DOM selectors.
 5. **Output Generation:** Emits a `.mcp.js` file using a **native-first, polyfill fallback** design. It registers the tool to Chrome 146's native `navigator.modelContext` if available, otherwise falling back to our `@webmcp/runtime` injection. Includes specialized framework-bypassing DOM setters like `__mcpSetValue()`.
 
 ### 2. The Browser Runtime (`@webmcp/runtime`)
@@ -86,7 +86,7 @@ The core command. Analyzes a file and generates the MCP integration.
 
 ## 🔒 Security & Risk Taxonomies
 
-WebMCP automatically prevents AIs from triggering destructive actions blindly. Output tools are categorized based on heuristics:
+The instrumentor automatically prevents AIs from triggering destructive actions blindly. Output tools are categorized based on heuristics:
 
 - 🟢 **Safe:** Search bars, navigation, expanders. Auto-included in `--yes`.
 - 🟡 **Caution:** Form submissions, adding items, saving drafts. Requires user confirmation or `--yes`.
@@ -110,7 +110,7 @@ This turns our engine into a full **authoring toolchain** for building out the u
 
 ## 👨‍💻 Developer & Contributor Guide
 
-WebMCP is a Turborepo monorepo.
+WebMCP Instrumentor is a Turborepo monorepo.
 1. `npm install`
 2. `npm run build`
 3. `npm run test` (Runs Vitest core suites and Playwright E2E suites)
