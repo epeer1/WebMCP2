@@ -1,5 +1,5 @@
 {
-  "name": "@webmcp/engine",
+  "name": "webmcp-instrument-engine",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -55,7 +55,7 @@
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   },
-  "author": "WebMCP",
+  "author": "webmcp-instrument",
   "license": "MIT",
   "repository": {
     "type": "git",

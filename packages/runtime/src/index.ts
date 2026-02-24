@@ -1,5 +1,5 @@
 // ────────────────────────────────────────────────────────────
-// @webmcp/runtime — Browser-side WebMCP Runtime
+// webmcp-instrument-runtime — Browser-side WebMCP Runtime
 // ────────────────────────────────────────────────────────────
 // Provides window.mcp with registerTool(), getTools(), invokeTool()
 // Size target: <2KB minified+gzipped

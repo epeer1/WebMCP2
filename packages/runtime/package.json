@@ -1,5 +1,5 @@
 {
-  "name": "@webmcp/runtime",
+  "name": "webmcp-instrument-runtime",
   "version": "0.1.0",
   "description": "WebMCP Instrumentor Runtime helpers",
   "type": "module",
@@ -26,13 +26,13 @@
     "vitest": "^3.0.0"
   },
   "keywords": [
-    "webmcp",
+    "webmcp-instrument",
     "mcp",
     "ai-agent",
     "browser-tools"
   ],
   "license": "MIT",
-  "author": "WebMCP",
+  "author": "webmcp-instrument",
   "repository": {
     "type": "git",
     "url": "https://github.com/epeer1/WebMCP2"

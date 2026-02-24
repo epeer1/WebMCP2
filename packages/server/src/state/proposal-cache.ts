@@ -1,4 +1,4 @@
-import type { ToolProposal, ComponentAnalysis } from '@webmcp/engine';
+import type { ToolProposal, ComponentAnalysis } from 'webmcp-instrument-engine';
 
 // ── In-memory proposal cache with TTL ───────────────────────
 

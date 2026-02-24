@@ -1,8 +1,8 @@
 import type { Plugin } from 'vite';
 import { resolve } from 'path';
-import { parseFile } from '@webmcp/engine/parser';
-import { buildProposals } from '@webmcp/engine/proposal';
-import { generateMCPCodeSync } from '@webmcp/engine/generator';
+import { parseFile } from 'webmcp-instrument-engine/parser';
+import { buildProposals } from 'webmcp-instrument-engine/proposal';
+import { generateMCPCodeSync } from 'webmcp-instrument-engine/generator';
 import { readFileSync, existsSync } from 'fs';
 import fg from 'fast-glob';
 const { globSync } = fg;

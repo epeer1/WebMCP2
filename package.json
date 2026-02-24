@@ -1,5 +1,5 @@
 {
-  "name": "webmcp-monorepo",
+  "name": "webmcp-instrument-monorepo",
   "version": "0.0.0",
   "private": true,
   "workspaces": [
@@ -8,11 +8,11 @@
   ],
   "scripts": {
     "build": "turbo run build",
-    "build:engine": "npm run build -w @webmcp/engine",
-    "build:runtime": "npm run build -w @webmcp/runtime",
-    "build:server": "npm run build -w @webmcp/server",
+    "build:engine": "npm run build -w webmcp-instrument-engine",
+    "build:runtime": "npm run build -w webmcp-instrument-runtime",
+    "build:server": "npm run build -w webmcp-instrument-server",
     "build:cli": "npm run build -w webmcp",
-    "dev:server": "npm run dev -w @webmcp/server",
+    "dev:server": "npm run dev -w webmcp-instrument-server",
     "dev:cli": "npm run dev -w webmcp",
     "test": "turbo run test",
     "lint": "turbo run lint",

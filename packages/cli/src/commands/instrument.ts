@@ -13,7 +13,7 @@ import {
   loadConfig,
   type OutputFormat,
   type ToolProposal,
-} from '@webmcp/engine';
+} from 'webmcp-instrument-engine';
 
 interface InstrumentOptions {
   output?: string;
@@ -56,7 +56,7 @@ export async function instrumentCommand(
   // 2. Detect LLM backend
   const llmSpinner = ora('Detecting LLM backend...').start();
   const llm = await detectLLMBackend(options.llm, options.model).catch(() => {
-    const { NoneAdapter } = require('@webmcp/engine/llm');
+    const { NoneAdapter } = require('webmcp-instrument-engine/llm');
     return new NoneAdapter();
   });
   llmSpinner.succeed(`Using: ${chalk.cyan(llm.name)} `);
@@ -150,7 +150,7 @@ export async function instrumentCommand(
 
   console.log(chalk.green(`\n📄 Written to: ${outputPath} \n`));
   console.log(chalk.gray('  Next steps:'));
-  console.log(chalk.gray('  1. Add <script src="https://unpkg.com/@webmcp/runtime"></script> to your page'));
+  console.log(chalk.gray('  1. Add <script src="https://unpkg.com/webmcp-instrument-runtime"></script> to your page'));
   console.log(chalk.gray(`  2. Add < script src = "${basename(outputPath)}" > </script> after the runtime\n`));
 }
 

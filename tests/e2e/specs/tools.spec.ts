@@ -17,7 +17,7 @@ test.describe('WebMCP Generated Tools E2E', () => {
         const logs: string[] = [];
         page.on('console', msg => logs.push(msg.text()));
 
-        // 3. Execute the tool exactly as the @webmcp/runtime would
+        // 3. Execute the tool exactly as the webmcp-instrument-runtime would
         const result = await page.evaluate(async () => {
             // @ts-expect-error - window.mcp is injected in app.html
             const tool = window.mcp.tools.get('submit_test_form');

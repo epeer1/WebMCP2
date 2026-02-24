@@ -1,11 +1,11 @@
 import { Router, type Request, type Response } from 'express';
-import { parseFile } from '@webmcp/engine/parser';
-import { buildProposals } from '@webmcp/engine/proposal';
-import { NoneAdapter } from '@webmcp/engine/llm';
-import { generateMCPCode } from '@webmcp/engine/generator';
+import { parseFile } from 'webmcp-instrument-engine/parser';
+import { buildProposals } from 'webmcp-instrument-engine/proposal';
+import { NoneAdapter } from 'webmcp-instrument-engine/llm';
+import { generateMCPCode } from 'webmcp-instrument-engine/generator';
 import { createHash } from 'node:crypto';
 import { cacheProposal, getLatestProposal } from '../state/proposal-cache.js';
-import type { ToolProposal } from '@webmcp/engine';
+import type { ToolProposal } from 'webmcp-instrument-engine';
 
 export const agentRouter = Router();
 
@@ -181,7 +181,7 @@ agentRouter.post('/', async (req: Request, res: Response) => {
       const response = [
         `✅ **Generated ${selected.length} MCP tool(s)**\n`,
         `\`\`\`javascript\n${code}\n\`\`\`\n`,
-        `Add \`<script src="https://unpkg.com/@webmcp/runtime"></script>\` to your page, then include this file.`,
+        `Add \`<script src="https://unpkg.com/webmcp-instrument-runtime"></script>\` to your page, then include this file.`,
       ].join('\n');
 
       streamSSE(res, response);

@@ -111,7 +111,7 @@ function formatOutput(toolRegistrations: string[], sourceHash: string, modeComme
 // Do not edit manually — re-run \`webmcp instrument\` to regenerate
 // Source hash: ${sourceHash}
 ${modeComment}
-// Requires: @webmcp/runtime — https://github.com/epeer1/WebMCP2
+// Requires: webmcp-instrument-runtime — https://github.com/epeer1/WebMCP2
 ${FRAMEWORK_HELPERS}
 ${toolRegistrations.join('\n')}
 `;
