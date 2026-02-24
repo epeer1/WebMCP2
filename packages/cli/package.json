@@ -1,7 +1,7 @@
 {
   "name": "webmcp",
   "version": "0.1.0",
-  "description": "CLI to auto-instrument web apps with WebMCP tools for AI agents",
+  "description": "WebMCP Instrumentor Command Line",
   "type": "module",
   "bin": {
     "webmcp": "./dist/cli.js"
@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^7.10.1",
-    "@webmcp/engine": "*",
+    "@webmcp/engine": "0.1.0",
+    "@webmcp/runtime": "0.1.0",
     "chalk": "^5.4.0",
     "commander": "^13.0.0",
     "ora": "^8.2.0"
@@ -33,5 +34,10 @@
     "cli",
     "auto-instrument"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "author": "WebMCP",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/epeer1/WebMCP2"
+  }
 }

@@ -2,6 +2,7 @@ import type { ToolProposal, OutputFormat, FrameworkType, LLMAdapter } from '../t
 import { FRAMEWORK_HELPERS } from './framework-helpers.js';
 import { generateHandlerWithLLM, buildTemplateHandler } from './handler-generator.js';
 import { createHash } from 'node:crypto';
+import { getCachedHandler, setCachedHandler } from '../cache/file-cache.js';
 
 export interface GenerateOptions {
   format: OutputFormat;
@@ -27,10 +28,21 @@ export async function generateMCPCode(
   const toolRegistrations: string[] = [];
 
   for (const tool of tools) {
-    // Per-tool: use LLM (with focused handler body context) or template
-    const handlerBody = isTemplate
-      ? buildTemplateHandler(tool)
-      : await generateHandlerWithLLM(tool, llm!);
+    let handlerBody: string;
+
+    if (isTemplate) {
+      handlerBody = buildTemplateHandler(tool);
+    } else {
+      const cached = getCachedHandler(tool);
+      if (cached) {
+        handlerBody = cached;
+      } else {
+        handlerBody = await generateHandlerWithLLM(tool, llm!);
+        if (handlerBody) {
+          setCachedHandler(tool, handlerBody);
+        }
+      }
+    }
 
     toolRegistrations.push(buildToolRegistration(tool, handlerBody));
   }

@@ -2,6 +2,7 @@ import type { ComponentAnalysis, FrameworkType } from '../types.js';
 import { extname } from 'node:path';
 import { parseReactFile } from './react-parser.js';
 import { parseHTMLFile } from './html-parser.js';
+import { parseVueFile } from './vue-parser.js';
 
 /**
  * Detect framework from file extension and parse accordingly.
@@ -18,7 +19,7 @@ export function parseFile(source: string, fileName: string): ComponentAnalysis {
     case 'html':
       return parseHTMLFile(source, fileName);
     case 'vue':
-      throw new Error(`Vue support is planned for v2. File: ${fileName}`);
+      return parseVueFile(source, fileName);
     default:
       throw new Error(`Unsupported file type: ${ext}. Supported: .tsx, .jsx, .html`);
   }
