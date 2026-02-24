@@ -2,33 +2,55 @@
 
 **The Authoring Toolchain for AI-Native Web UIs**
 
-WebMCP Instrumentor is a zero-config CLI that automatically parses your React/HTML components and **generates WebMCP tools**. It allows any AI agent (like GitHub Copilot, Claude CLI, Cursor) to physically interact with your web application in real-time—filling out forms, clicking buttons, and driving the UI safely using LLM-generated handlers and powerful risk taxonomies.
+WebMCP Instrumentor is a zero-config suite that automatically parses your React/Vue/HTML components and **generates WebMCP tools**. It allows any AI agent (like GitHub Copilot, Claude CLI, Cursor) to physically interact with your web application in real-time—filling out forms, clicking buttons, and driving the UI safely using LLM-generated handlers and powerful risk taxonomies.
 
 ---
 
 ## ⚡ Quickstart
 
+### Integration via Vite (Recommended)
+
+Drop the plugin into your Vite build to automatically detect components and generate native Agent tools on the fly:
+
+1. **Install the WebMCP Instrumentor plugin:**
+   ```bash
+   npm install -D webmcp-instrument-vite webmcp-instrument-engine webmcp-instrument-runtime
+   ```
+
+2. **Add to `vite.config.ts`:**
+   ```typescript
+   import webmcp from 'webmcp-instrument-vite';
+
+   export default defineConfig({
+     plugins: [
+       webmcp({ include: ['src/**/*.tsx', 'src/**/*.vue'] })
+     ]
+   });
+   ```
+
+That's it! When you run `npm run dev`, your components are automatically parsed into `navigator.modelContext` tools straight out of the box.
+
+### Manual Instrumention (CLI)
+
 1. **Initialize WebMCP Instrumentor in your project:**
    ```bash
-   npx webmcp init
+   npx webmcp-instrument init
    ```
 
 2. **Instrument a component:**
    ```bash
-   npx webmcp instrument src/components/ContactForm.tsx
+   npx webmcp-instrument instrument src/components/ContactForm.tsx
    ```
-   The instrumentor will parse the React AST, find all interactive forms/buttons, and use an LLM (OpenAI, GitHub Models, or Ollama) to generate the exact JavaScript DOM handlers needed to drive them.
+   The instrumentor will parse the component AST, find all interactive forms/buttons, and use an LLM (OpenAI, GitHub Models, or Ollama) to generate the exact JavaScript DOM handlers needed to drive them.
 
 3. **Drop the generated file into your app:**
    ```html
    <!-- Load the generic WebMCP runtime -->
-   <script src="https://unpkg.com/@webmcp/runtime"></script>
+   <script src="https://unpkg.com/webmcp-instrument-runtime"></script>
    
    <!-- Load your new auto-generated tools -->
    <script src="dist/ContactForm.mcp.js"></script>
    ```
-
-That's it! If you have a locally running Copilot Extension or MCP server connected, your chat agent can now natively submit your Contact Form.
 
 ---
 
@@ -36,28 +58,28 @@ That's it! If you have a locally running Copilot Extension or MCP server connect
 
 WebMCP Instrumentor operates in two phases: the **Build-time Instrumentor** and the **Browser Runtime**.
 
-### 1. The Build-Time Engine (`webmcp instrument`)
+### 1. The Build-Time Engine
 
-When you point the instrumentor at a source file (React `.tsx` or pure `.html`), the Engine goes through a pipeline:
+When you point the instrumentor at a source file (React `.tsx`, Vue `.vue`, or pure `.html`), the Engine goes through a pipeline:
 
-1. **AST / HTML Parsing:** Uses `ts-morph` (for React) or `htmlparser2` (for HTML) to deeply understand the component's structure, extracting `useState` bindings, inputs, textareas, selects, and form submission boundaries.
+1. **AST / HTML Parsing:** Uses `ts-morph` (for React), `@vue/compiler-sfc` (for Vue), or `htmlparser2` (for HTML) to deeply understand the component's structure, extracting `useState` bindings, inputs, textareas, selects, and form submission boundaries.
 2. **Proposal Building:** Groups related inputs (e.g., all fields within a `<form>`) into cohesive "Tool Candidates".
 3. **Risk Classification:** Analyzes button labels (`"Delete Account"` vs `"Save"`) to automatically classify tools as `safe`, `caution`, or `destructive`. Destructive tools are excluded by default for safety.
-4. **LLM Code Generation:** Instead of relying purely on fragile templates, the engine passes the specifically zoomed-in event handler to an LLM of your choice (via `--llm github-models`). We instruct it to map semantic intentions to physical DOM selectors.
-5. **Output Generation:** Emits a `.mcp.js` file using a **native-first, polyfill fallback** design. It registers the tool to Chrome 146's native `navigator.modelContext` if available, otherwise falling back to our `@webmcp/runtime` injection. Includes specialized framework-bypassing DOM setters like `__mcpSetValue()`.
+4. **Interactive Hashing & LLM Generation:** Creates a deterministic hash of your UI's "interactive surface". Only requests LLM generation when the physical interactive paths change, pulling from a local `.webmcp` cache for blazing-fast HMR updates.
+5. **Output Generation:** Emits native-first code. It registers the tool to Chrome 146's native `navigator.modelContext` if available, otherwise falling back to our `webmcp-instrument-runtime` injection. Includes specialized framework-bypassing DOM setters like `__mcpSetValue()`.
 
-### 2. The Browser Runtime (`@webmcp/runtime`)
+### 2. The Browser Runtime (`webmcp-instrument-runtime`)
 
-The lightweight browser script provides the `window.mcp` global array and acts as the actual communication layer (via Server-Sent Events or WebSockets) to the AI Agent. When the agent asks to "submit the contact form", the runtime executes the generated `handler` from the `.mcp.js` tool.
+The lightweight browser script provides the `window.mcp` global array and acts as the actual communication layer to the AI Agent. When the agent asks to "submit the contact form", the runtime executes the generated `handler`.
 
 ---
 
 ## 🛠️ CLI Reference
 
-### `webmcp init`
+### `webmcp-instrument init`
 Generates a `.webmcprc.json` configuration file in your project root and auto-appends `*.mcp.js` to your `.gitignore`.
 
-### `webmcp instrument <file>`
+### `webmcp-instrument instrument <file>`
 The core command. Analyzes a file and generates the MCP integration.
 
 **Key Flags:**
@@ -78,8 +100,8 @@ The core command. Analyzes a file and generates the MCP integration.
 | Framework | Status | Notes |
 |---|---|---|
 | **React** | ✅ Native Support | Parses AST, hooks, and `onSubmit`/`onClick`. Bypasses React's internal state tracker automatically so synthetic inputs actually register. |
+| **Vue SFC** | ✅ Native Support | Deeply parses `.vue` template markup and `<script setup>` variables. Bypasses Proxy DOM reactivity logic cleanly. |
 | **HTML** | ✅ Native Support | Reads native DOM structures, extracts form groups and native `label`s. |
-| **Vue SFC** | 🚧 Planned (v2) | `.vue` parsing architecture planned. |
 | **Next.js** | ⚠️ Partial | Client components fully supported. Server Components skipped intentionally (no browser UI to interact with). |
 
 ---
@@ -96,15 +118,13 @@ All definitions can be overridden manually by supplying a `classifications` map 
 
 ---
 
-## 🔮 Native WebMCP Support & V2 Roadmap
+## 🔮 Native WebMCP Support & V2 Architecture
 
 As of early 2026, Chrome 146+ has released experimental support for **native WebMCP** via `navigator.modelContext`.
 
 WebMCP Instrumentor is fully future-proofed and acts as an immediate bridge to this new standard. Upon code generation, our tools execute a **native-first polyfill fallback**:
 1. If `navigator.modelContext` exists (Chrome 146+ with flags enabled), the tool registers directly to the spec.
-2. Otherwise, it falls back to our `@webmcp/runtime` script injection, enabling identical behavior today across all browsers.
-
-This turns our engine into a full **authoring toolchain** for building out the upcoming W3C Web Machine Learning specification, giving you React AST understanding, risk taxonomies, and LLM-driven selectors straight out of the box.
+2. Otherwise, it falls back to our `webmcp-instrument-runtime` script injection, enabling identical behavior today across all browsers.
 
 ---
 
