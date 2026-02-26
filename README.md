@@ -57,7 +57,14 @@ Drop the plugin into your Vite build to automatically detect components and gene
    });
    ```
 
-That's it! When you run `npm run dev`, your components are automatically parsed into `navigator.modelContext` tools straight out of the box.
+3. **Import the runtime in your app entry:**
+   ```typescript
+   // src/main.tsx
+   import 'webmcp-instrument-runtime';
+   import { createRoot } from 'react-dom/client';
+   ```
+
+That's it! When you run `npm run dev`, your components are automatically parsed into `window.mcp` tools straight out of the box.
 
 ### Manual Instrumention (CLI)
 
