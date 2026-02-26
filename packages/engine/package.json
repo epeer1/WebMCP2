@@ -1,7 +1,6 @@
 {
   "name": "webmcp-instrument-engine",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -39,11 +38,15 @@
       "import": "./dist/probe/index.js"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "vitest run",
-    "clean": "rimraf dist *.tsbuildinfo"
+    "clean": "rimraf dist *.tsbuildinfo",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@vue/compiler-sfc": "^3.5.29",

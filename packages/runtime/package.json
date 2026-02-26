@@ -18,7 +18,8 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "vitest run",
-    "clean": "rimraf dist *.tsbuildinfo"
+    "clean": "rimraf dist *.tsbuildinfo",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "rimraf": "^6.0.0",

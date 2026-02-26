@@ -1,8 +1,37 @@
 # WebMCP Instrumentor 🕷️
 
+[![npm: webmcp-instrument](https://img.shields.io/npm/v/webmcp-instrument?label=webmcp-instrument&color=blue)](https://www.npmjs.com/package/webmcp-instrument)
+[![npm: webmcp-instrument-vite](https://img.shields.io/npm/v/webmcp-instrument-vite?label=vite-plugin&color=blue)](https://www.npmjs.com/package/webmcp-instrument-vite)
+[![npm: webmcp-instrument-engine](https://img.shields.io/npm/v/webmcp-instrument-engine?label=engine&color=blue)](https://www.npmjs.com/package/webmcp-instrument-engine)
+[![npm: webmcp-instrument-runtime](https://img.shields.io/npm/v/webmcp-instrument-runtime?label=runtime&color=blue)](https://www.npmjs.com/package/webmcp-instrument-runtime)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 **The Authoring Toolchain for AI-Native Web UIs**
 
 WebMCP Instrumentor is a zero-config suite that automatically parses your React/Vue/HTML components and **generates WebMCP tools**. It allows any AI agent (like GitHub Copilot, Claude CLI, Cursor) to physically interact with your web application in real-time—filling out forms, clicking buttons, and driving the UI safely using LLM-generated handlers and powerful risk taxonomies.
+
+---
+
+## 📦 Installation
+
+```bash
+npm install -D webmcp-instrument
+```
+
+Or for **Vite** projects (recommended):
+
+```bash
+npm install -D webmcp-instrument-vite webmcp-instrument-engine webmcp-instrument-runtime
+```
+
+### Packages
+
+| Package | Purpose |
+|---------|---------|
+| [`webmcp-instrument`](https://www.npmjs.com/package/webmcp-instrument) | CLI — the main entry point. Run `npx webmcp-instrument` to instrument your components. |
+| [`webmcp-instrument-vite`](https://www.npmjs.com/package/webmcp-instrument-vite) | Vite plugin — zero-config auto-instrumentation during `npm run dev`. |
+| [`webmcp-instrument-engine`](https://www.npmjs.com/package/webmcp-instrument-engine) | Core engine — AST parsing, code generation, risk classification. Used internally by the CLI and Vite plugin. |
+| [`webmcp-instrument-runtime`](https://www.npmjs.com/package/webmcp-instrument-runtime) | Browser runtime — tiny helper injected into your app to bridge AI agents and the DOM. |
 
 ---
 
