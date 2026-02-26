@@ -33,6 +33,10 @@
     "./llm": {
       "types": "./dist/llm/index.d.ts",
       "import": "./dist/llm/index.js"
+    },
+    "./probe": {
+      "types": "./dist/probe/index.d.ts",
+      "import": "./dist/probe/index.js"
     }
   },
   "scripts": {
@@ -47,6 +51,7 @@
     "ajv": "^8.17.0",
     "cosmiconfig": "^9.0.0",
     "htmlparser2": "^9.1.0",
+    "playwright": "^1.58.2",
     "prettier": "^3.5.0",
     "ts-morph": "^25.0.1"
   },

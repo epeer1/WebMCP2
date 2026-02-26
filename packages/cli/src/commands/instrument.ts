@@ -24,6 +24,7 @@ interface InstrumentOptions {
   llm?: string;
   model?: string;
   format?: string;
+  url?: string;
 }
 
 const RISK_BADGE: Record<string, string> = {
@@ -74,13 +75,45 @@ export async function instrumentCommand(
   const analysis = parseFile(source, basename(filePath));
   spinner.succeed(`Parsed ${chalk.white(basename(filePath))} (${analysis.framework})`);
 
-  // 4. Build proposals
+  // 4. Run Dev-Mode Probe (if url provided)
+  const devUrl = options.url ?? 'http://localhost:3000'; // Defaulting for now, will be arg
+  const probeSpinner = ora(`Running headless ground-truth probe on ${devUrl}...`).start();
+  let probeElements: any[] = [];
+  try {
+    const { runProbe } = await import('webmcp-instrument-engine');
+    const probeResult = await runProbe(devUrl, { headless: true, timeoutMs: 5000 });
+    probeElements = probeResult.elements;
+    probeSpinner.succeed(`Probe extracted ${probeElements.length} interactive elements from DOM`);
+  } catch (err) {
+    probeSpinner.warn(`Probe failed (${(err as Error).message}) — falling back to pure AST heuristics`);
+  }
+
+  // 5. Match AST to Runtime
+  if (probeElements.length > 0) {
+    const matchSpinner = ora('Synthesizing selector strategies...').start();
+    const { matchElementsToProbe } = await import('webmcp-instrument-engine');
+
+    // Flat map all elements to match
+    const allAstElements = analysis.components.flatMap(c => c.elements);
+    matchElementsToProbe(allAstElements, probeElements);
+
+    matchSpinner.succeed('Synthesized fallback strategies (Confidence thresholds applied)');
+  }
+
+  // 6. Build proposals
   const proposals = buildProposals(analysis);
 
   if (proposals.length === 0) {
     console.log(chalk.yellow('\n⚠ No instrumentable elements found.'));
     console.log(chalk.gray('  This file has no forms, buttons, or interactive elements.\n'));
     return;
+  }
+
+  // Pre-flight warning check for unstable selectors
+  const unstable = proposals.filter(p => p.isStable === false);
+  if (unstable.length > 0) {
+    console.log(chalk.yellow(`\n⚠ Warning: ${unstable.length} tool(s) failed the Confidence Threshold (< 0.6)`));
+    console.log(chalk.gray(`  WebMCP recommends adding stable \`data-mcp\` or \`data-testid\` attributes to these components.`));
   }
 
   // 5. Print proposal table

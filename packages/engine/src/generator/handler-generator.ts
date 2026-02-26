@@ -1,5 +1,5 @@
 import type { ToolProposal, UIElement } from '../types.js';
-import { buildSelector, buildSetCall, buildSubmitCall } from '../generator/framework-helpers.js';
+import { buildSelectorArray, buildSetCall, buildSubmitCall } from '../generator/framework-helpers.js';
 
 // ── LLM prompts ───────────────────────────────────────────────
 
@@ -9,11 +9,11 @@ export function buildHandlerPrompt(tool: ToolProposal): string {
         .join('\n');
 
     const selectors = tool.sourceMapping.inputElements
-        .map(el => `  - ${buildSelector(el)} → ${el.label ?? el.name ?? el.id ?? el.tag}`)
+        .map(el => `  - ${buildSelectorArray(el)} → ${el.label ?? el.name ?? el.id ?? el.tag}`)
         .join('\n');
 
     const triggerSel = tool.sourceMapping.triggerElement
-        ? buildSelector(tool.sourceMapping.triggerElement)
+        ? buildSelectorArray(tool.sourceMapping.triggerElement)
         : 'unknown';
 
     // ── Key improvement: use the actual handler body as context ──
@@ -39,15 +39,15 @@ Description: ${tool.description}
 Input parameters (what the AI agent will provide):
 ${fields || '  (none)'}
 
-DOM selectors to use:
+DOM selectors to use (Note: these are JSON arrays of fallback selectors, NOT strings):
 ${selectors || '  (none — use the submit trigger directly'}
-Trigger selector: ${triggerSel}
+Trigger selector array: ${triggerSel}
 ${handlerContext}
-Available DOM helpers (already in scope):
-- __mcpSetValue(selector, value) — sets input/textarea value, fires React change events
-- __mcpSetChecked(selector, checked) — sets checkbox state
-- __mcpSetSelect(selector, value) — sets select dropdown value
-- __mcpClick(selector) — clicks a button or element
+Available DOM helpers (already in scope, they accept the JSON array of selectors):
+- __mcpSetValue(selectorsArray, value) — sets input/textarea value, fires React change events
+- __mcpSetChecked(selectorsArray, checked) — sets checkbox state
+- __mcpSetSelect(selectorsArray, value) — sets select dropdown value
+- __mcpClick(selectorsArray) — clicks a button or element
 
 Generate ONLY the async handler body (statements inside async (params) => { ... }).
 Requirements:

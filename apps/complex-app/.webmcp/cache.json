@@ -1,0 +1,10 @@
+{
+  "195aa47fbf0d734a1e7a4e091b4bf36b1b8305a3bf327fca6cf04fed6a92dbc8": {
+    "handlerBody": "try {\n    setStatus('Restarting...');\n    await __mcpClick([\"[aria-label=\\\"Restart Main Service\\\"]\"]);\n    setTimeout(() => setStatus('Operational'), 2000);\n    return { success: true, message: 'Main service restarted successfully.' };\n} catch (err) {\n    return { success: false, message: err.message };\n}",
+    "timestamp": 1772096953756
+  },
+  "7d9f8b34dae081a3b30a2a3f5a9587bcf02fff6589cf6247610523d9a6a3ef9b": {
+    "handlerBody": "try {\n    __mcpClick([\"[aria-label=\\\"Flush Redis Cache Database\\\"]\"]);\n    return { success: true, message: 'Redis Cache Database flushed successfully.' };\n} catch (err) {\n    return { success: false, message: err.message };\n}",
+    "timestamp": 1772096956047
+  }
+}

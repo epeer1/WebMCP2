@@ -24,8 +24,14 @@ According to the `IMPLEMENTATION_DESIGN.md` and our technical plans, we have suc
 
 ### Phase 4: E2E Validation & Packaging
 *   **Playwright E2E Browser Testing**: We proved the architecture works in a real browser. Playwright loads React, injects our generated tools, executes the agent handler, and successfully verifies the UI state updates natively.
-*   **NPM Packaging**: We wired up `exports`, `bin`, and the monorepo `turbo build` pipeline for `@webmcp/engine`, `@webmcp/runtime`, and the `webmcp` CLI to publish to npm.
+*   **NPM Packaging**: We wired up `exports`, `bin`, and the monorepo `turbo build` pipeline for `webmcp-instrument-engine`, `webmcp-instrument-runtime`, and the `webmcp` CLI to publish to npm.
 *   **Documentation**: Created a comprehensive `README.md` containing the integration guide, architecture diagram, and framework support matrix.
+
+### Phase 5: Hybrid Discovery Architecture
+*   **Deterministic Tool Hashing**: Tool IDs are now generated using a layout-agnostic SHA-256 hash of their semantic intent to prevent breakage due to styling refactors.
+*   **Headless Runtime Probe**: The CLI now spins up a Playwright headless browser instance to extract the live Accessibility Tree (roles, names) directly from the running dev server.
+*   **Self-Healing Selector Synthesis**: The pipeline triangulates AST intents against the live HTML elements to produce JSON arrays of fallback strategies (Data-Hook > Label > CSS structure).
+*   **Confidence Threshold Policy**: Extracted tools with exclusively brittle DOM selectors (score < 0.6) are now flagged, preventing silent destructive mutations and prompting the developer for accessibility hooks prior to code generation.
 
 ---
 
@@ -80,8 +86,8 @@ if (typeof navigator !== 'undefined' && 'modelContext' in navigator) {
 }
 ```
 
-**2. The `@webmcp/runtime` Pivot (Implemented)**
-With the above fallback, our `@webmcp/runtime` package successfully acts as the **official polyfill** (similar to the `@mcp-b/global` reference) for older browsers or those without the `#experimental-web-platform-features` flag enabled.
+**2. The `webmcp-instrument-runtime` Pivot (Implemented)**
+With the above fallback, our `webmcp-instrument-runtime` package successfully acts as the **official polyfill** (similar to the `@mcp-b/global` reference) for older browsers or those without the `#experimental-web-platform-features` flag enabled.
 
 **3. Declarative HTML Generation (Planned V2)**
 Chrome 146 introduced a declarative DOM API. For static sites without JS, our HTML parser could be updated to automatically inject these new standard attributes into the source files:
@@ -91,10 +97,10 @@ Chrome 146 introduced a declarative DOM API. For static sites without JS, our HT
 
 ## 🔌 Steps to make it fully ready as a GitHub Copilot Extension
 
-The `@webmcp/server` package already contains the express server skeleton implementing the GitHub Copilot SSE text streaming protocol. To go live:
+The `webmcp-instrument-server` package already contains the express server skeleton implementing the GitHub Copilot SSE text streaming protocol. To go live:
 
 1. **Deploy the Server**: 
-   - Deploy `@webmcp/server` to Vercel, Render, or Railway.
+   - Deploy `webmcp-instrument-server` to Vercel, Render, or Railway.
    - Set the `GITHUB_TOKEN` environment variable so the server can verify Copilot identity payloads.
 2. **Register the GitHub App**:
    - Go to GitHub Developer Settings ➡️ GitHub Apps ➡️ **New GitHub App**.

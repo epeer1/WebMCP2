@@ -86,6 +86,7 @@ function buildToolRegistration(tool: ToolProposal, handlerBody: string): string 
 
   return `
 const tool_${tool.name} = {
+  id: ${JSON.stringify(tool.id)},
   name: ${JSON.stringify(tool.name)},
   description: ${JSON.stringify(tool.description)},
   inputSchema: {

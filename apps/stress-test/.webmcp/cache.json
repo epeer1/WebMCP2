@@ -1,0 +1,18 @@
+{
+  "46d8129737cdb11252f0bfe980a8811584e5acc0fbb4a7b9e787d034d0fb781d": {
+    "handlerBody": "try {\n    __mcpSetValue([\"#webhookUrl\",\"input[type=\\\"url\\\"]\"], webhook_url);\n    __mcpSetValue([\"#retryCount\",\"input[type=\\\"number\\\"]\"], retry_count);\n    __mcpClick([\"input[type=\\\"submit\\\"]\"]);\n    return { success: true, message: 'Changes saved successfully.' };\n} catch (err) {\n    return { success: false, message: err.message };\n}",
+    "timestamp": 1772097944760
+  },
+  "94271ecc8f435809881d65e02b0ec6e7fb9084e4e73f9e5f6156d555af38c7d8": {
+    "handlerBody": "try {\n    // Assuming there are input fields to fill, use __mcpSetValue for each\n    // Example: __mcpSetValue([\"#inputField1\"], paramValue1);\n    \n    // Trigger the action\n    await __mcpClick([\"/* TODO: add id to button */\"]);\n    return { success: true, message: 'Webhook settings configured successfully.' };\n} catch (err) {\n    return { success: false, message: err.message };\n}",
+    "timestamp": 1772097949593
+  },
+  "161838fff8c2f94dbb9ad620fbe66b956cd7f884c8a96c69b7dce2bbdfdf1f4a": {
+    "handlerBody": "try {\n    alert(`Deleted ${selected.size} users: ${Array.from(selected).join(', ')}`);\n    setSelected(new Set());\n    __mcpClick([\"Delete Selected\", \"button:Delete Selected\", \"button\"]);\n    return { success: true, message: 'Users deleted successfully.' };\n} catch (err) {\n    return { success: false, message: err.message };\n}",
+    "timestamp": 1772098328872
+  },
+  "80d8716be3f99189dba63d6e410c8e214a5068f3286842cda9d498982478775b": {
+    "handlerBody": "try {\n    alert(`Managing user ${user.name}`);\n    __mcpClick([\"button\"]);\n    return { success: true, message: `Successfully managed user ${user.name}` };\n} catch (err) {\n    return { success: false, message: err.message };\n}",
+    "timestamp": 1772098331209
+  }
+}

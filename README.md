@@ -65,7 +65,8 @@ When you point the instrumentor at a source file (React `.tsx`, Vue `.vue`, or p
 1. **AST / HTML Parsing:** Uses `ts-morph` (for React), `@vue/compiler-sfc` (for Vue), or `htmlparser2` (for HTML) to deeply understand the component's structure, extracting `useState` bindings, inputs, textareas, selects, and form submission boundaries.
 2. **Proposal Building:** Groups related inputs (e.g., all fields within a `<form>`) into cohesive "Tool Candidates".
 3. **Risk Classification:** Analyzes button labels (`"Delete Account"` vs `"Save"`) to automatically classify tools as `safe`, `caution`, or `destructive`. Destructive tools are excluded by default for safety.
-4. **Interactive Hashing & LLM Generation:** Creates a deterministic hash of your UI's "interactive surface". Only requests LLM generation when the physical interactive paths change, pulling from a local `.webmcp` cache for blazing-fast HMR updates.
+4. **Hybrid Discovery & Deterministic Hashing:** The engine boots a **Headless Playwright Probe** against your local development server to extract the live Ground Truth Accessibility Tree. It matches this against the AST to triangulate highly resilient, self-healing CSS selector fallbacks. It also calculates a deterministic SHA-256 tool hash based strictly on semantic intent, ensuring your tools don't break when you merely refactor CSS layouts.
+5. **Confidence Threshold Policy:** If extracted tools score below `< 0.6` match confidence (e.g. nested identical list loops without IDs), the engine warns the developer and blocks autonomous LLM generation to prevent agent hallucination, prompting for `data-mcp` hook injection.
 5. **Output Generation:** Emits native-first code. It registers the tool to Chrome 146's native `navigator.modelContext` if available, otherwise falling back to our `webmcp-instrument-runtime` injection. Includes specialized framework-bypassing DOM setters like `__mcpSetValue()`.
 
 ### 2. The Browser Runtime (`webmcp-instrument-runtime`)
@@ -89,6 +90,7 @@ The core command. Analyzes a file and generates the MCP integration.
   - `ollama` (Local execution via `OLLAMA_BASE_URL`)
   - `none` (Fallback to static template-matching)
 - `--model <name>`: Override the default model (e.g., `--model gpt-4o`).
+- `--url <url>`: Target the local dev server for the Playwright Ground Truth Probe (default: `http://localhost:3000`).
 - `--yes`: Accept all safe tools without the interactive prompt.
 - `--all`: Include `destructive` tools (use with extreme caution).
 - `--dry-run`: Output proposals to stdout without writing files.

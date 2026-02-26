@@ -164,14 +164,36 @@ function extractJSXElements(fn: FunctionLike): UIElement[] {
 
         // Extract inner text (for buttons: <button>Delete Account</button>)
         let innerText: string | undefined;
+        let wrappingLabelText: string | undefined;
+
         if (node.isKind(SyntaxKind.JsxOpeningElement)) {
             const parentEl = node.getParent();
             if (parentEl?.isKind(SyntaxKind.JsxElement)) {
+                // 1. Get inner text of this element
                 const textChildren = parentEl.getJsxChildren()
                     .filter(c => c.isKind(SyntaxKind.JsxText))
                     .map(c => c.getText().trim())
                     .filter(Boolean);
                 if (textChildren.length > 0) innerText = textChildren.join(' ');
+
+                // 2. Traverse up to find a wrapping <label>
+                let current: Node | undefined = parentEl.getParent();
+                while (current) {
+                    if (current.isKind(SyntaxKind.JsxElement)) {
+                        const openTag = current.getOpeningElement().getTagNameNode().getText();
+                        if (openTag === 'label' || openTag === 'Label') {
+                            const labelTextNodes = current.getJsxChildren()
+                                .filter(c => c.isKind(SyntaxKind.JsxText))
+                                .map(c => c.getText().trim())
+                                .filter(Boolean);
+                            if (labelTextNodes.length > 0) {
+                                wrappingLabelText = labelTextNodes.join(' ');
+                                break;
+                            }
+                        }
+                    }
+                    current = current.getParent();
+                }
             }
         }
 
@@ -180,7 +202,7 @@ function extractJSXElements(fn: FunctionLike): UIElement[] {
             id: attrs['id'],
             name: attrs['name'],
             inputType: attrs['type'] ?? KNOWN_INPUT_COMPONENTS[tagName]?.inputType,
-            label: attrs['placeholder'] ?? attrs['aria-label'] ?? attrs['label'] ?? innerText,
+            label: attrs['placeholder'] ?? attrs['aria-label'] ?? attrs['label'] ?? wrappingLabelText ?? innerText,
             attributes: attrs,
             parentFormId: formDepth > 0 ? currentFormId : undefined,
         };

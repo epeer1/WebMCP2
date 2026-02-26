@@ -6,9 +6,16 @@
 
 export const FRAMEWORK_HELPERS = `
 // ── WebMCP DOM helpers ──────────────────────────────────────
-function __mcpSetValue(selector, value) {
-  const el = document.querySelector(selector);
-  if (!el) throw new Error('[WebMCP] Element not found: ' + selector);
+function __mcpFind(selectors) {
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (el) return el;
+  }
+  throw new Error('[WebMCP] Element not found matching any of: ' + selectors.join(', '));
+}
+
+function __mcpSetValue(selectors, value) {
+  const el = __mcpFind(selectors);
   // Use native setter to bypass React's value tracking
   const proto = el instanceof HTMLTextAreaElement
     ? HTMLTextAreaElement.prototype
@@ -23,25 +30,22 @@ function __mcpSetValue(selector, value) {
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function __mcpSetChecked(selector, checked) {
-  const el = document.querySelector(selector);
-  if (!el) throw new Error('[WebMCP] Element not found: ' + selector);
+function __mcpSetChecked(selectors, checked) {
+  const el = __mcpFind(selectors);
   const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'checked')?.set;
   if (nativeSetter) nativeSetter.call(el, checked);
   else el.checked = checked;
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function __mcpSetSelect(selector, value) {
-  const el = document.querySelector(selector);
-  if (!el) throw new Error('[WebMCP] Element not found: ' + selector);
+function __mcpSetSelect(selectors, value) {
+  const el = __mcpFind(selectors);
   el.value = value;
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function __mcpClick(selector) {
-  const el = document.querySelector(selector);
-  if (!el) throw new Error('[WebMCP] Element not found: ' + selector);
+function __mcpClick(selectors) {
+  const el = __mcpFind(selectors);
   el.click();
 }
 // ────────────────────────────────────────────────────────────
@@ -52,17 +56,26 @@ function __mcpClick(selector) {
 import type { UIElement } from '../types.js';
 
 /**
- * Build the most stable CSS selector for a UI element.
- * Priority: id > data-testid > name > aria-label > positional comment
+ * Build a JSON array of fallback CSS selectors for a UI element.
+ * Prioritizes the runtime-probed strategy fallback array if available.
  */
-export function buildSelector(el: UIElement): string {
-    if (el.id) return `#${el.id}`;
-    if (el.attributes['data-testid']) return `[data-testid="${el.attributes['data-testid']}"]`;
-    if (el.name) return `[name="${el.name}"]`;
-    if (el.accessibilityHints?.ariaLabel) return `[aria-label="${el.accessibilityHints.ariaLabel}"]`;
-    if (el.inputType) return `input[type="${el.inputType}"]`;
-    // Last resort: positional — tell dev to add an id
-    return `/* TODO: add id or data-testid to this ${el.tag} element */`;
+export function buildSelectorArray(el: UIElement): string {
+  if (el.selectorFallback && el.selectorFallback.length > 0) {
+    const strats = el.selectorFallback.map(s => s.value);
+    return JSON.stringify(strats);
+  }
+
+  // AST fallback if probe was bypassed or failed
+  const fallbacks: string[] = [];
+  if (el.id) fallbacks.push(`#${el.id}`);
+  if (el.attributes['data-testid']) fallbacks.push(`[data-testid="${el.attributes['data-testid']}"]`);
+  if (el.name) fallbacks.push(`[name="${el.name}"]`);
+  if (el.accessibilityHints?.ariaLabel) fallbacks.push(`[aria-label="${el.accessibilityHints.ariaLabel}"]`);
+  if (el.inputType) fallbacks.push(`input[type="${el.inputType}"]`);
+
+  if (fallbacks.length === 0) fallbacks.push(`/* TODO: add id to ${el.tag} */`);
+
+  return JSON.stringify(fallbacks);
 }
 
 /**
@@ -70,18 +83,26 @@ export function buildSelector(el: UIElement): string {
  * Returns the JS expression string (without semicolon).
  */
 export function buildSetCall(el: UIElement, paramName: string): string {
-    const sel = buildSelector(el);
-    if (el.tag === 'select') return `__mcpSetSelect('${sel}', ${paramName})`;
-    if (el.inputType === 'checkbox') return `__mcpSetChecked('${sel}', ${paramName})`;
-    return `__mcpSetValue('${sel}', ${paramName})`;
+  const sels = buildSelectorArray(el);
+  if (el.tag === 'select') return `__mcpSetSelect(${sels}, ${paramName})`;
+  if (el.inputType === 'checkbox') return `__mcpSetChecked(${sels}, ${paramName})`;
+  return `__mcpSetValue(${sels}, ${paramName})`;
 }
 
 /**
  * Build the submit/trigger call for a form or button.
  */
 export function buildSubmitCall(el: UIElement | undefined): string {
-    if (!el) return `/* No trigger element found */`;
-    const sel = buildSelector(el);
-    if (el.tag === 'form') return `__mcpClick('${sel} [type="submit"]')`;
-    return `__mcpClick('${sel}')`;
+  if (!el) return `/* No trigger element found */`;
+
+  if (el.tag === 'form') {
+    // Find the submit button inside the form array
+    const sels = buildSelectorArray(el);
+    // We need to map the form selectors to find the submit button inside them
+    const submitSels = JSON.parse(sels).map((s: string) => `${s} [type="submit"]`);
+    return `__mcpClick(${JSON.stringify(submitSels)})`;
+  }
+
+  const sels = buildSelectorArray(el);
+  return `__mcpClick(${sels})`;
 }

@@ -114,10 +114,19 @@ export function parseVueFile(source: string, fileName: string): ComponentAnalysi
                     id: attrs['id'],
                     name: attrs['name'],
                     inputType: attrs['type'],
-                    label: attrs['placeholder'] ?? attrs['aria-label'],
+                    label: attrs['placeholder'] ?? attrs['aria-label'] ?? attrs['label'],
                     attributes: attrs,
                     parentFormId: formDepth > 0 ? currentFormId : undefined
                 };
+
+                // Accessibility
+                if (attrs['aria-label'] || attrs['aria-describedby'] || attrs['role']) {
+                    el.accessibilityHints = {
+                        ariaLabel: attrs['aria-label'],
+                        ariaDescribedBy: attrs['aria-describedby'],
+                        role: attrs['role'],
+                    };
+                }
 
                 // v-model binding
                 const vModel = attrs['v-model'];

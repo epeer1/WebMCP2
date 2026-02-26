@@ -21,6 +21,7 @@ program
   .option('--llm <backend>', 'LLM backend: openai | github-models | ollama | none')
   .option('--model <name>', 'Model name for the chosen LLM backend (e.g. gpt-4o, llama3, phi3)')
   .option('--format <format>', 'Output format: iife | esm | auto', 'auto')
+  .option('--url <url>', 'Local dev server URL for the headless runtime probe', 'http://localhost:3000')
   .action(instrumentCommand);
 
 program

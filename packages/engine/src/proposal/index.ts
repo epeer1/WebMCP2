@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type {
     ComponentAnalysis,
     ComponentInfo,
@@ -44,14 +45,20 @@ export function buildProposals(analysis: ComponentAnalysis): ToolProposal[] {
             const name = generateToolName(candidate);
             const description = generateDescription(candidate);
             const inputSchema = buildSchema(candidate);
+            const id = generateToolId(candidate);
+
+            const { isStable, unstableReason } = assessStability(candidate);
 
             proposals.push({
                 index: index++,
+                id,
                 name,
                 description,
                 risk,
                 riskReason: reason,
-                selected: risk !== 'destructive',  // safe + caution pre-checked; destructive unchecked
+                isStable,
+                unstableReason,
+                selected: risk !== 'destructive' && isStable !== false,  // require stability to pre-check
                 inputSchema,
                 sourceMapping: {
                     componentName: candidate.componentName,
@@ -281,6 +288,54 @@ function mapInputTypeToJSONType(inputType: string): string {
     }
 }
 
+// ── Confidence Stability Assessment ───────────────────────────
+
+/**
+ * Enforces the "Confidence Threshold Policy":
+ * If any input field has a max selector fallback score < 0.6, the tool is marked unstable.
+ */
+function assessStability(candidate: ToolCandidate): { isStable: boolean; unstableReason?: string } {
+    const threshold = 0.6;
+
+    // Check all parsed inputs for stability
+    for (const el of candidate.inputElements) {
+        if (!el.selectorFallback || el.selectorFallback.length === 0) {
+            return {
+                isStable: false,
+                unstableReason: `Input field '${el.name ?? el.id ?? el.tag}' lacks a runtime selector`,
+            };
+        }
+
+        const topScore = Math.max(...el.selectorFallback.map(s => s.score));
+        if (topScore < threshold) {
+            return {
+                isStable: false,
+                unstableReason: `Unstable selector for '${el.name ?? el.label ?? el.tag}' (max confidence: ${topScore.toFixed(1)} < ${threshold})`,
+            };
+        }
+    }
+
+    // Check trigger element (if present) for stability
+    if (candidate.triggerElement) {
+        const trg = candidate.triggerElement;
+        if (!trg.selectorFallback || trg.selectorFallback.length === 0) {
+            return {
+                isStable: false,
+                unstableReason: `Trigger button lacks a runtime selector`,
+            };
+        }
+        const topScore = Math.max(...trg.selectorFallback.map(s => s.score));
+        if (topScore < threshold) {
+            return {
+                isStable: false,
+                unstableReason: `Unstable trigger selector (max confidence: ${topScore.toFixed(1)} < ${threshold})`,
+            };
+        }
+    }
+
+    return { isStable: true };
+}
+
 // ── Utilities ─────────────────────────────────────────────────
 
 function toSnakeCase(str: string): string {
@@ -291,4 +346,36 @@ function toSnakeCase(str: string): string {
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '')
         .toLowerCase();
+}
+
+/** 
+ * Generates a stable deterministic ID by hashing the *semantic intent* of the tool candidate.
+ * Explicitly ignores styling, DOM layout changes, and code positions.
+ */
+function generateToolId(candidate: ToolCandidate): string {
+    const parts: string[] = [];
+
+    // Form grouping boundary
+    parts.push(candidate.componentName);
+    parts.push(candidate.type);
+
+    // Trigger action semantics
+    if (candidate.triggerElement) {
+        parts.push(candidate.triggerElement.tag);
+        parts.push(candidate.triggerElement.label ?? '');
+        parts.push(candidate.triggerElement.attributes['name'] ?? '');
+    }
+
+    // Input field semantics
+    for (const el of candidate.inputElements) {
+        // Field identifier
+        parts.push(el.name ?? el.id ?? el.stateBinding?.variable ?? '');
+        // Field accessibility label
+        parts.push(el.label ?? el.accessibilityHints?.ariaLabel ?? '');
+        // Field role
+        parts.push(el.inputType ?? el.tag);
+    }
+
+    const raw = parts.join('|').toLowerCase();
+    return createHash('sha256').update(raw).digest('hex').slice(0, 12);
 }

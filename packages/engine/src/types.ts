@@ -39,6 +39,8 @@ export interface UIElement {
   };
   /** Parent form element tag/id, if nested inside a <form> */
   parentFormId?: string;
+  /** Synthesized runtime selector strategies (populated during Phase 3 matching) */
+  selectorFallback?: SelectorStrategy[];
 }
 
 // ── Event Handlers ─────────────────────────────────────────
@@ -101,15 +103,51 @@ export interface ComponentAnalysis {
   components: ComponentInfo[];
 }
 
+// ── Selector Synthesis ───────────────────────────────────────
+
+export interface SelectorStrategy {
+  strategy: 'testid' | 'mcp' | 'label' | 'role' | 'css';
+  value: string;
+  score: number;
+}
+
+// ── Runtime Probe Models ─────────────────────────────────────
+
+export interface ProbeElement {
+  tag: string;
+  id?: string;
+  nameAttribute?: string;
+  inputType?: string;
+  /** The computed accessible name (e.g. from aria-label, <label>, or innerText) */
+  accessibleName: string;
+  /** The computed ARIA role (e.g. 'button', 'textbox', 'checkbox') */
+  role: string;
+  /** Unique structural path/selector (e.g. xpath or unique CSS) */
+  selector: string;
+  /** Boundary geometry for proximity matching */
+  bounds?: { x: number; y: number; width: number; height: number };
+  attributes: Record<string, string>;
+  isInteractive: boolean;
+}
+
+export interface ProbeResult {
+  url: string;
+  elements: ProbeElement[];
+  timestamp: number;
+}
+
 // ── Tool Proposal ──────────────────────────────────────────
 
 /** A proposed tool ready for user review */
 export interface ToolProposal {
   index: number;                   // 1-based for display
+  id: string;                      // Deterministic hash of semantic intent
   name: string;                    // "submit_contact_form"
   description: string;             // "Fill and submit the contact form"
   risk: ToolRisk;
   riskReason?: string;             // "Handler calls DELETE /api/account"
+  isStable?: boolean;              // Result of Confidence Threshold Policy score check
+  unstableReason?: string;         // E.g., "Max selector score < 0.6"
   /** Pre-selected for generation? safe=true, caution=true, destructive=false */
   selected: boolean;
   /** The input schema the agent will call this tool with */
