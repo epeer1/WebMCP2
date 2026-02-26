@@ -4,7 +4,7 @@ import { buildProposals } from '../src/proposal/index.js';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const fixturesDir = resolve(__dirname, '../../../test/fixtures/react');
+const fixturesDir = resolve(__dirname, '../../../tests/fixtures/react');
 
 function loadFixture(name: string): string {
     return readFileSync(resolve(fixturesDir, name), 'utf-8');

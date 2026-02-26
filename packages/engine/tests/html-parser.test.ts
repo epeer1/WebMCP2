@@ -4,7 +4,7 @@ import { buildProposals } from '../src/proposal/index.js';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const fixturesDir = resolve(__dirname, '../../../test/fixtures/html');
+const fixturesDir = resolve(__dirname, '../../../tests/fixtures/html');
 
 // ── contact.html ──────────────────────────────────────────────
 
