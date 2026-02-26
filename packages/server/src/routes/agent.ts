@@ -114,7 +114,7 @@ agentRouter.post('/', async (req: Request, res: Response) => {
   setupSSEHeaders(res);
 
   if (!userMessage) {
-    streamSSE(res, '👋 **WebMCP Auto-Instrumentor**\n\nSend me a React component to instrument:\n```\n@webmcp instrument\n```tsx\n// paste your component here\n```\n```');
+    streamSSE(res, '👋 **WebMCP Auto-Instrumentor**\n\nSend me a React component to instrument:\n```\n@webmcp-instrument instrument\n```tsx\n// paste your component here\n```\n```');
     return;
   }
 
@@ -123,7 +123,7 @@ agentRouter.post('/', async (req: Request, res: Response) => {
     const sourceCode = extractSourceCode(userMessage);
 
     if (!sourceCode) {
-      streamSSE(res, '🔍 **WebMCP Auto-Instrumentor**\n\nPlease paste your component code after the `instrument` command:\n\n````\n@webmcp instrument\n```tsx\nexport default function MyForm() { ... }\n```\n````');
+      streamSSE(res, '🔍 **WebMCP Auto-Instrumentor**\n\nPlease paste your component code after the `instrument` command:\n\n````\n@webmcp-instrument instrument\n```tsx\nexport default function MyForm() { ... }\n```\n````');
       return;
     }
 
@@ -154,7 +154,7 @@ agentRouter.post('/', async (req: Request, res: Response) => {
     const cached = getLatestProposal(userId);
 
     if (!cached) {
-      streamSSE(res, '⏲️ **No active proposal found**\n\nYour tool proposal may have expired (5 min timeout). Run `@webmcp instrument` again to get a fresh proposal.');
+      streamSSE(res, '⏲️ **No active proposal found**\n\nYour tool proposal may have expired (5 min timeout). Run `@webmcp-instrument instrument` again to get a fresh proposal.');
       return;
     }
 

@@ -61,7 +61,7 @@ export const ERRORS = {
             'Cached proposal expired',
             'PROPOSAL_EXPIRED',
             'Your tool proposal has expired (5 min timeout).',
-            'Run @webmcp instrument again to get a fresh proposal.',
+            'Run @webmcp-instrument instrument again to get a fresh proposal.',
         ),
 
     PARSE_FAILED: (file: string, detail: string) =>

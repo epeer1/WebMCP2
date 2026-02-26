@@ -5,12 +5,19 @@ exports[`generateMCPCodeSync > matches snapshot for complete generated code (Con
 // Do not edit manually — re-run \`webmcp instrument\` to regenerate
 // Source hash: send_contact_form
 // Template mode (sync)
-// Requires: @webmcp/runtime — https://github.com/epeer1/WebMCP2
+// Requires: webmcp-instrument-runtime — https://github.com/epeer1/WebMCP2
 
 // ── WebMCP DOM helpers ──────────────────────────────────────
-function __mcpSetValue(selector, value) {
-  const el = document.querySelector(selector);
-  if (!el) throw new Error('[WebMCP] Element not found: ' + selector);
+function __mcpFind(selectors) {
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (el) return el;
+  }
+  throw new Error('[WebMCP] Element not found matching any of: ' + selectors.join(', '));
+}
+
+function __mcpSetValue(selectors, value) {
+  const el = __mcpFind(selectors);
   // Use native setter to bypass React's value tracking
   const proto = el instanceof HTMLTextAreaElement
     ? HTMLTextAreaElement.prototype
@@ -25,31 +32,29 @@ function __mcpSetValue(selector, value) {
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function __mcpSetChecked(selector, checked) {
-  const el = document.querySelector(selector);
-  if (!el) throw new Error('[WebMCP] Element not found: ' + selector);
+function __mcpSetChecked(selectors, checked) {
+  const el = __mcpFind(selectors);
   const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'checked')?.set;
   if (nativeSetter) nativeSetter.call(el, checked);
   else el.checked = checked;
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function __mcpSetSelect(selector, value) {
-  const el = document.querySelector(selector);
-  if (!el) throw new Error('[WebMCP] Element not found: ' + selector);
+function __mcpSetSelect(selectors, value) {
+  const el = __mcpFind(selectors);
   el.value = value;
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function __mcpClick(selector) {
-  const el = document.querySelector(selector);
-  if (!el) throw new Error('[WebMCP] Element not found: ' + selector);
+function __mcpClick(selectors) {
+  const el = __mcpFind(selectors);
   el.click();
 }
 // ────────────────────────────────────────────────────────────
 
 
 const tool_send_contact_form = {
+  id: "87b9baf6aade",
   name: "send_contact_form",
   description: "Send the form with: name, email, message",
   inputSchema: {
@@ -72,11 +77,11 @@ const tool_send_contact_form = {
   },
   handler: async (params) => {
     try {
-      __mcpSetValue('#name', params.name);
-      __mcpSetValue('#email', params.email);
-      __mcpSetValue('#message', params.message);
+      __mcpSetValue(["#name"], params.name);
+      __mcpSetValue(["#email","input[type=\\"email\\"]"], params.email);
+      __mcpSetValue(["#message"], params.message);
       await new Promise(r => setTimeout(r, 100));
-      __mcpClick('input[type="submit"]');
+      __mcpClick(["input[type=\\"submit\\"]"]);
       return { success: true, message: "handleSubmit triggered (POST /api/contact)" };
     } catch (err) {
       return { success: false, message: err instanceof Error ? err.message : String(err) };

@@ -2,7 +2,7 @@
 // Do not edit manually — re-run `webmcp instrument` to regenerate
 // Source hash: 9b2e527e76b1
 // Generated without LLM — add OPENAI_API_KEY or run `gh auth login` for better handlers
-// Requires: @webmcp/runtime — https://github.com/user/webmcp
+// Requires: webmcp-instrument-runtime — https://github.com/epeer1/WebMCP2
 
 // ── WebMCP DOM helpers ──────────────────────────────────────
 function __mcpSetValue(selector, value) {
@@ -52,10 +52,10 @@ window.mcp.registerTool({
   inputSchema: {
     type: "object",
     properties: {
-        "display_name": {
-            "type": "string",
-            "description": "Display name"
-        }
+      "display_name": {
+        "type": "string",
+        "description": "Display name"
+      }
     },
     required: []
   },

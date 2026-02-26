@@ -49,7 +49,7 @@ To solve the "black box" abstraction of UI libraries, we are deploying a **Hybri
 We are radically shifting *what* we ask the LLM to do.
 
 *   **Execution (Writing Selectors): NO LLM NEEDED.** 
-    The `@webmcp/runtime` handles execution deterministically using the array of fallback selectors curated by our discovery engine. It is instant, self-healing, and requires zero LLM API calls, completely isolating issues of latency during agent interaction.
+    The `webmcp-instrument-runtime` handles execution deterministically using the array of fallback selectors curated by our discovery engine. It is instant, self-healing, and requires zero LLM API calls, completely isolating issues of latency during agent interaction.
 *   **Discovery (Synthesizing Intent): LLM REQUIRED.**
     We feed the brilliant "Ground Truth Map" curated by our engine to the LLM. 
     > **The Ground Truth Map Contract:** A JSON structure representing `tools → fields → selector fallback arrays → confidence → risk category`. This acts as the stable contract between the engine, the execution runtime, and any future IDE extensions.
@@ -79,7 +79,7 @@ In an era of Agentic AI, autonomous LLMs introduce a novel threat vector: **AI-D
 WebMCP mitigates these vulnerabilities by acting as a **Security Policy Engine for AI Agents**:
 
 1.  **The Mitigation of Prompt Injection (Risk Taxonomies):**
-    Because WebMCP extracts intent statically at build-time, we encode the developer's semantic knowledge into an immutable contract. The compiler automatically flags tools (e.g., `checkout` = `caution`, `delete_user` = `destructive`). If an AI is tricked via Prompt Injection into executing a destructive tool, the `@webmcp/runtime` physically blocks silent execution, enforcing a native browser confirmation dialog.
+    Because WebMCP extracts intent statically at build-time, we encode the developer's semantic knowledge into an immutable contract. The compiler automatically flags tools (e.g., `checkout` = `caution`, `delete_user` = `destructive`). If an AI is tricked via Prompt Injection into executing a destructive tool, the `webmcp-instrument-runtime` physically blocks silent execution, enforcing a native browser confirmation dialog.
 2.  **Deterministic Tool Contract (Build-time Verified Targets):**
     A bad actor attempting an XSS attack might inject a fake `<button>` designed to intercept data or trigger malicious flows if clicked by an Agent. Because the WebMCP runtime solely acts on pre-discovered targets using a strict selector strategy (rather than interacting with "any new DOM element"), injected elements that are not part of the discovered states and don't match stable selectors within the verified state containers are fundamentally ignored.
 3.  **Reducing Accidental Exfiltration (Default-Deny Optics):**

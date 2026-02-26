@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { NoneAdapter } from '../src/llm/none-adapter.js';
 import { buildTemplateHandler } from '../src/generator/handler-generator.js';
-import { buildSelector, buildSetCall, buildSubmitCall } from '../src/generator/framework-helpers.js';
+import { buildSelectorArray, buildSetCall, buildSubmitCall } from '../src/generator/framework-helpers.js';
 import { parseFile } from '../src/parser/index.js';
 import { buildProposals } from '../src/proposal/index.js';
 import { readFileSync } from 'node:fs';
@@ -42,22 +42,22 @@ describe('NoneAdapter', () => {
     });
 });
 
-// ── buildSelector ─────────────────────────────────────────────
+// ── buildSelectorArray ─────────────────────────────────────────────
 
-describe('buildSelector priority', () => {
+describe('buildSelectorArray priority', () => {
     it('prefers #id when available', () => {
         const el = { tag: 'input', id: 'email', attributes: {} };
-        expect(buildSelector(el as any)).toBe('#email');
+        expect(buildSelectorArray(el as any)).toBe('["#email"]');
     });
 
     it('uses data-testid when no id', () => {
         const el = { tag: 'input', attributes: { 'data-testid': 'email-input' } };
-        expect(buildSelector(el as any)).toBe('[data-testid="email-input"]');
+        expect(buildSelectorArray(el as any)).toBe('["[data-testid=\\"email-input\\"]"]');
     });
 
     it('uses [name] when no id or testid', () => {
         const el = { tag: 'input', name: 'email', attributes: {} };
-        expect(buildSelector(el as any)).toBe('[name="email"]');
+        expect(buildSelectorArray(el as any)).toBe('["[name=\\"email\\"]"]');
     });
 
     it('uses aria-label when only that is available', () => {
@@ -66,12 +66,12 @@ describe('buildSelector priority', () => {
             attributes: {},
             accessibilityHints: { ariaLabel: 'Search products' },
         };
-        expect(buildSelector(el as any)).toBe('[aria-label="Search products"]');
+        expect(buildSelectorArray(el as any)).toBe('["[aria-label=\\"Search products\\"]"]');
     });
 
     it('falls back to input[type=...] for typed inputs', () => {
         const el = { tag: 'input', inputType: 'search', attributes: {} };
-        expect(buildSelector(el as any)).toBe('input[type="search"]');
+        expect(buildSelectorArray(el as any)).toBe('["input[type=\\"search\\"]"]');
     });
 });
 
@@ -80,17 +80,17 @@ describe('buildSelector priority', () => {
 describe('buildSetCall', () => {
     it('produces __mcpSetValue for text input', () => {
         const el = { tag: 'input', id: 'name', inputType: 'text', attributes: {} };
-        expect(buildSetCall(el as any, 'params.name')).toBe("__mcpSetValue('#name', params.name)");
+        expect(buildSetCall(el as any, 'params.name')).toBe('__mcpSetValue(["#name","input[type=\\"text\\"]"], params.name)');
     });
 
     it('produces __mcpSetChecked for checkbox', () => {
         const el = { tag: 'input', id: 'agree', inputType: 'checkbox', attributes: {} };
-        expect(buildSetCall(el as any, 'params.agree')).toBe("__mcpSetChecked('#agree', params.agree)");
+        expect(buildSetCall(el as any, 'params.agree')).toBe('__mcpSetChecked(["#agree","input[type=\\"checkbox\\"]"], params.agree)');
     });
 
     it('produces __mcpSetSelect for select', () => {
         const el = { tag: 'select', id: 'category', attributes: {} };
-        expect(buildSetCall(el as any, 'params.category')).toBe("__mcpSetSelect('#category', params.category)");
+        expect(buildSetCall(el as any, 'params.category')).toBe('__mcpSetSelect(["#category"], params.category)');
     });
 });
 
