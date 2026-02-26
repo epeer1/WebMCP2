@@ -9,9 +9,12 @@ virtual module — so AI assistants can interact with your app out of the box.
 
 ```bash
 npm install webmcp-instrument-vite -D
+npm install webmcp-instrument-runtime
 ```
 
 ## Setup
+
+### 1. Configure Vite
 
 ```ts
 // vite.config.ts
@@ -22,6 +25,19 @@ import webmcp from 'webmcp-instrument-vite'
 export default defineConfig({
   plugins: [react(), webmcp()]
 })
+```
+
+### 2. Import the Runtime
+
+To ensure tools are correctly registered (especially outside of browsers that natively support `navigator.modelContext`), import the runtime in your app's main entry file (e.g., `main.tsx` or `index.js`):
+
+```ts
+// src/main.tsx
+import { createRoot } from 'react-dom/client'
+import 'webmcp-instrument-runtime' // <-- Add this!
+import App from './App'
+
+createRoot(document.getElementById('root')).render(<App />)
 ```
 
 ### Options
