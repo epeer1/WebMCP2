@@ -30,7 +30,7 @@ export default function webmcpPlugin(options: WebMCPPluginOptions = {}): Plugin 
         }
     }
 
-    function generateForFile(file: string) {
+    function generateForFile(file: string, context: 'scan' | 'hmr' = 'scan') {
         try {
             const source = readFileSync(file, 'utf-8');
             const analysis = parseFile(source, file);
@@ -52,7 +52,13 @@ export default function webmcpPlugin(options: WebMCPPluginOptions = {}): Plugin 
                 framework: analysis.framework
             });
             generatedCodes.set(file, code);
-            console.log(`[WebMCP] Incremental update (LLM bypassed) for ${file}`);
+
+            const shortPath = file.replace(process.cwd().replace(/\\/g, '/'), '.').replace(/\\/g, '/');
+            if (context === 'scan') {
+                console.log(`[WebMCP] Scanned: ${shortPath} (${validProposals.length} tool${validProposals.length !== 1 ? 's' : ''} proposed)`);
+            } else {
+                console.log(`[WebMCP] Hot update: ${shortPath}`);
+            }
         } catch (err) {
             // Ignored non-parseable files
         }
@@ -84,7 +90,7 @@ export default function webmcpPlugin(options: WebMCPPluginOptions = {}): Plugin 
 
         handleHotUpdate({ file, server, modules }) {
             if (includeGlobs.some(g => file.match(new RegExp(g.replace('**/*', '.*').replace('*', '.*'))))) {
-                generateForFile(file);
+                generateForFile(file, 'hmr');
 
                 // Invalidate the virtual module
                 const mod = server.moduleGraph.getModuleById(RESOLVED_VIRTUAL_MODULE_ID);
