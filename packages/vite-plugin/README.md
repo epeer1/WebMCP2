@@ -74,7 +74,7 @@ navigator.modelContext // Chrome native WebMCP API
 1. **Scan** — On build start, the plugin globs your component files and parses them for interactive elements (forms, buttons, inputs, etc.)
 2. **Propose** — Each element is turned into an MCP tool proposal with a name, description, input schema, and risk level
 3. **Generate** — Tool proposals are compiled into executable JS code (DOM helpers + tool registration)
-4. **Inject** — The generated code is served as a Vite virtual module (`virtual:webmcp-tools`) that registers all tools at runtime
+4. **Inject** — The generated code is served as a Vite virtual module (`virtual:webmcp-tools`). It writes tools to an async buffer (`window.mcp.__toolBuffer`) that prevents race conditions, allowing the runtime to register them once it spins up.
 5. **HMR** — When you edit a component, the virtual module is re-generated and the page hot-reloads
 
 ## License

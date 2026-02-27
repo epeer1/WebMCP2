@@ -1,7 +1,7 @@
 {
   "name": "webmcp-instrument-runtime",
-  "version": "0.1.0",
-  "description": "WebMCP Instrumentor Runtime helpers",
+  "version": "0.1.1",
+  "description": "Browser Runtime for WebMCP Auto-Instrumentation",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

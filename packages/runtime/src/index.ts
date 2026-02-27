@@ -92,10 +92,18 @@ export function createMCPRuntime(): MCPRuntime {
 function autoInit(): void {
   if (typeof window === 'undefined') return;
 
-  // Don't overwrite existing runtime (idempotent)
-  if ((window as any).mcp) return;
+  const existingMcp = (window as any).mcp;
+  const newMcp = createMCPRuntime();
 
-  (window as any).mcp = createMCPRuntime();
+  // If there's an existing object with tools buffered (from the virtual module fallback)
+  if (existingMcp && Array.isArray(existingMcp.__toolBuffer)) {
+    existingMcp.__toolBuffer.forEach((t: any) => newMcp.registerTool(t));
+  } else if (existingMcp && existingMcp.version) {
+    // Already fully initialized
+    return;
+  }
+
+  (window as any).mcp = newMcp;
   window.dispatchEvent(new Event('mcp:ready'));
 }
 

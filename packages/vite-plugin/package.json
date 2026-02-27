@@ -1,6 +1,6 @@
 {
     "name": "webmcp-instrument-vite",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "description": "Vite Plugin for Zero-Config WebMCP Auto-Instrumentation",
     "type": "module",
     "main": "dist/index.js",
@@ -21,7 +21,7 @@
     },
     "dependencies": {
         "fast-glob": "^3.3.3",
-        "webmcp-instrument-engine": "0.1.0"
+        "webmcp-instrument-engine": "^0.1.1"
     },
     "peerDependencies": {
         "chokidar": "^3.0.0 || ^4.0.0",

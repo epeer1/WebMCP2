@@ -27,7 +27,8 @@ export async function generateMCPCode(
 
   const toolRegistrations: string[] = [];
 
-  for (const tool of tools) {
+  for (let i = 0; i < tools.length; i++) {
+    const tool = tools[i];
     let handlerBody: string;
 
     if (isTemplate) {
@@ -44,7 +45,7 @@ export async function generateMCPCode(
       }
     }
 
-    toolRegistrations.push(buildToolRegistration(tool, handlerBody));
+    toolRegistrations.push(buildToolRegistration(tool, handlerBody, i));
   }
 
   const sourceHash = createHash('sha256')
@@ -69,8 +70,8 @@ export function generateMCPCodeSync(
   tools: ToolProposal[],
   _options: Omit<GenerateOptions, 'llm'>,
 ): string {
-  const toolRegistrations = tools.map(tool =>
-    buildToolRegistration(tool, buildTemplateHandler(tool))
+  const toolRegistrations = tools.map((tool, index) =>
+    buildToolRegistration(tool, buildTemplateHandler(tool), index)
   );
 
   const hash = tools.map(t => t.name).join('+');
@@ -79,13 +80,15 @@ export function generateMCPCodeSync(
 
 // ── Shared helpers ────────────────────────────────────────────
 
-function buildToolRegistration(tool: ToolProposal, handlerBody: string): string {
+function buildToolRegistration(tool: ToolProposal, handlerBody: string, index: number): string {
   const propsJSON = JSON.stringify(tool.inputSchema.properties, null, 4)
     .replace(/^/gm, '    ')
     .trimStart();
 
+  const varName = `tool_${index}`;
+
   return `
-const tool_${tool.name} = {
+const ${varName} = {
   id: ${JSON.stringify(tool.id)},
   name: ${JSON.stringify(tool.name)},
   description: ${JSON.stringify(tool.description)},
@@ -100,10 +103,10 @@ ${indentBody(handlerBody, 4)}
 };
 
 if (typeof navigator !== 'undefined' && 'modelContext' in navigator) {
-  navigator.modelContext.registerTool(tool_${tool.name});
+  navigator.modelContext.registerTool(${varName});
 } else {
-  window.mcp = window.mcp || { registerTool: () => {} };
-  window.mcp.registerTool(tool_${tool.name});
+  window.mcp = window.mcp || { __toolBuffer: [], registerTool: function(t) { this.__toolBuffer.push(t); } };
+  window.mcp.registerTool(${varName});
 }`;
 }
 

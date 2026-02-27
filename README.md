@@ -103,7 +103,8 @@ When you point the instrumentor at a source file (React `.tsx`, Vue `.vue`, or p
 3. **Risk Classification:** Analyzes button labels (`"Delete Account"` vs `"Save"`) to automatically classify tools as `safe`, `caution`, or `destructive`. Destructive tools are excluded by default for safety.
 4. **Hybrid Discovery & Deterministic Hashing:** The engine boots a **Headless Playwright Probe** against your local development server to extract the live Ground Truth Accessibility Tree. It matches this against the AST to triangulate highly resilient, self-healing CSS selector fallbacks. It also calculates a deterministic SHA-256 tool hash based strictly on semantic intent, ensuring your tools don't break when you merely refactor CSS layouts.
 5. **Confidence Threshold Policy:** If extracted tools score below `< 0.6` match confidence (e.g. nested identical list loops without IDs), the engine warns the developer and blocks autonomous LLM generation to prevent agent hallucination, prompting for `data-mcp` hook injection.
-5. **Output Generation:** Emits native-first code. It registers the tool to Chrome 146's native `navigator.modelContext` if available, otherwise falling back to our `webmcp-instrument-runtime` injection. Includes specialized framework-bypassing DOM setters like `__mcpSetValue()`.
+6. **Async Tool Buffering:** Generated tools are strictly sandboxed into an asynchronous queue (`window.mcp.__toolBuffer`). This safely resolves any execution race conditions regardless of how Vite or Webpack orders your bundle scripts in the DOM.
+7. **Output Generation:** Emits native-first code. It registers the tool to Chrome 146's native `navigator.modelContext` if available, otherwise falling back to our `webmcp-instrument-runtime` injection. Includes specialized framework-bypassing DOM setters like `__mcpSetValue()`.
 
 ### 2. The Browser Runtime (`webmcp-instrument-runtime`)
 
